@@ -55,6 +55,12 @@ export async function payout(r: Round): Promise<Partial<Round>> {
   const kp = payoutKeypair();
   const c = conn();
   // 1. les comptes de tokens du joueur (créés s'ils n'existent pas, payés par le wallet de gains)
+  // boule d'essai : valeur trop petite pour ouvrir des comptes et acheter, on la rend directement en SOL
+  if (value < 5_000_000) {
+    const { blockhash } = await c.getLatestBlockhash("confirmed");
+    const refundTx = await sendSigned(new Transaction({ feePayer: kp.publicKey, recentBlockhash: blockhash }).add(SystemProgram.transfer({ fromPubkey: kp.publicKey, toPubkey: player, lamports: value })), kp);
+    return { buys: [], refundTx, refunded: value, simulated: false };
+  }
   const mintInfos = await c.getMultipleAccountsInfo(tokens.map((t) => new PublicKey(t.mint)));
   const progs = mintInfos.map((m) => (m?.owner.equals(TOKEN_2022_PROGRAM_ID) ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID));
   const atas = tokens.map((t, i) => getAssociatedTokenAddressSync(new PublicKey(t.mint), player, true, progs[i]));
@@ -72,6 +78,12 @@ export async function payout(r: Round): Promise<Partial<Round>> {
   // 2. la valeur à acheter (moins l'ouverture des comptes si ATA_RENT=deduct : ce SOL reste au joueur, il le récupère en fermant le compte)
   const spend = Math.max(0, value - (ATA_RENT === "deduct" ? rent : 0));
   const share = Math.floor(spend / tokens.length);
+  // part trop petite pour un achat sensé (< 0,0005 SOL par token) : tout est rendu en SOL, rien n'est acheté
+  if (share < 500_000) {
+    const { blockhash } = await c.getLatestBlockhash("confirmed");
+    const refundTx = await sendSigned(new Transaction({ feePayer: kp.publicKey, recentBlockhash: blockhash }).add(SystemProgram.transfer({ fromPubkey: kp.publicKey, toPubkey: player, lamports: value })), kp);
+    return { buys: [], ataTx, refundTx, refunded: value, simulated: false };
+  }
   // 3. un achat Jupiter par token, livré directement dans le compte du joueur
   const buys: Buy[] = [];
   let unspent = 0;

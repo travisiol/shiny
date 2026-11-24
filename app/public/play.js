@@ -8,6 +8,9 @@ const BALLS = [
   { k: 'GOLD', price: '1 SOL', big: '1 in 20', col: '#FFC233' },
 ];
 const CHAIN = 'solana:mainnet';
+// boule d'essai privée : seulement avec le lien ?test=<clé> (le serveur vérifie la clé)
+const TEST_KEY = new URLSearchParams(location.search).get('test');
+if (TEST_KEY) BALLS.unshift({ k: 'TEST', price: '0.01 SOL', big: '1 in 50', col: '#4FB3FF' });
 
 // ---------- wallets (Wallet Standard)
 const wallets = [];
@@ -16,7 +19,7 @@ window.addEventListener('wallet-standard:register-wallet', (e) => { try { e.deta
 window.dispatchEvent(new CustomEvent('wallet-standard:app-ready', { detail: reg }));
 const usable = () => wallets.filter((w) => w.features && w.features['standard:connect'] && w.features['solana:signAndSendTransaction'] && (w.chains || []).some((c) => c.startsWith('solana:')));
 
-let wallet = null, account = null, ball = 'MINI', busy = false, msg = '';
+let wallet = null, account = null, ball = TEST_KEY ? 'TEST' : 'MINI', busy = false, msg = '';
 
 // ---------- base58 (signature de la transaction → texte)
 const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
@@ -39,7 +42,7 @@ const css = `
 .sh h3{margin:0 0 4px;font:400 34px/1 'Luckiest Guy';color:#fff;-webkit-text-stroke:5px var(--ink);paint-order:stroke fill;text-shadow:0 4px 0 var(--ink)}
 .sh .lead2{margin:0 0 16px;font:600 14px/1.4 Poppins}
 .sh-x{position:absolute;top:12px;right:12px;width:38px;height:38px;border:3px solid var(--ink);border-radius:50%;background:#fff;font:700 18px/1 Poppins;cursor:pointer;box-shadow:2px 3px 0 var(--ink)}
-.sh-balls{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.sh-balls{display:grid;grid-template-columns:repeat(var(--n,3),1fr);gap:10px;margin-bottom:16px}
 .sh-ball{padding:12px 6px 10px;border:3px solid var(--ink);border-radius:18px;background:#fff;cursor:pointer;text-align:center;box-shadow:3px 4px 0 var(--ink);transition:transform .15s}
 .sh-ball:hover{transform:translateY(-2px)}
 .sh-ball[aria-pressed=true]{background:var(--sun);transform:translateY(-3px) rotate(-2deg)}
@@ -76,7 +79,7 @@ function render() {
   const price = BALLS.find((b) => b.k === ball).price;
   sheet.innerHTML = `<button class="sh-x" type="button" data-a="close" aria-label="Close">✕</button>
     <h3 id="shT">Pick your ball</h3><p class="lead2">Five real memecoins inside, bought the second it pops.</p>
-    <div class="sh-balls">${balls}</div>${walletPart}
+    <div class="sh-balls" style="--n:${BALLS.length}">${balls}</div>${walletPart}
     <button class="btn btn-main sh-go" type="button" data-a="pay" ${!account || busy ? 'disabled' : ''}>${busy ? 'Check your wallet…' : `Pop it! · ${price}`}</button>
     <p class="sh-msg" aria-live="polite">${msg}</p>
     <p class="sh-fine">18+ only. Memecoins are volatile: your tokens can be worth less than you paid. Odds and every draw are public. Not financial advice.</p>`;
@@ -123,7 +126,7 @@ async function pay() {
   busy = true; msg = ''; render();
   let round, signature;
   try {
-    round = await api('/api/round', { ball, player: account.address });
+    round = await api('/api/round', { ball, player: account.address, testKey: TEST_KEY || undefined });
     const bytes = Uint8Array.from(atob(round.transaction), (c) => c.charCodeAt(0));
     const [out] = await wallet.features['solana:signAndSendTransaction'].signAndSendTransaction({ account, chain: CHAIN, transaction: bytes });
     signature = b58(out.signature);
