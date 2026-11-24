@@ -145,38 +145,175 @@ async function pay() {
 }
 
 // ---------- livraison d'un tirage payé (premier envoi, reprise, ou nouvel essai après une panne)
+// La boule s'ouvre dès que le tirage est fait ; une carte « Delivering your tokens » suit la livraison en direct `[F-123]`
 const GET = async (url) => { const r = await fetch(url, { cache: 'no-store' }); const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || 'Server error'); return j; };
 const sol = (x) => (Math.round(x * 10000) / 10000).toString();
+const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
 let pendingRetry = null;
+
 function toResult(r) {
-  if (r.status === 'failed') { pendingRetry = { id: r.id, signature: r.signature }; throw new Error(r.error || 'Delivery failed on our side. Your payment is safe: tap Try again to finish it.'); }
-  pendingRetry = null;
   const got = (r.buys || []).filter((b) => b.tx).length;
-  return {
-    n: r.rarity, m: r.mult,
-    sub: r.simulated ? `Test mode: ${sol(r.value)} SOL of tokens, not bought for real.`
-      : got ? `${sol(r.value)} SOL in ${got} tokens sent to your wallet${r.refunded ? ` (+${sol(r.refunded)} SOL back)` : ''}.`
-      : `${sol(r.refunded || r.value)} SOL sent back to your wallet.`,
-    link: r.simulated ? `/api/round/${r.id}` : `https://solscan.io/account/${r.player}#portfolio`,
+  let sub;
+  if (r.simulated) sub = `Test mode: ${sol(r.value)} SOL of tokens, not bought for real.`;
+  else if (r.status !== 'done') sub = `${sol(r.value)} SOL of tokens on the way to your wallet.`;
+  else if (got) sub = `${sol(r.value)} SOL in ${got} tokens sent to your wallet${r.refunded ? ` (+${sol(r.refunded)} SOL back)` : ''}.`;
+  else sub = `${sol(r.refunded || r.value)} SOL sent back to your wallet.`;
+  return { n: r.rarity, m: r.mult, sub, link: r.simulated ? `/api/round/${r.id}` : `https://solscan.io/account/${r.player}#portfolio` };
+}
+
+// ----- la carte de livraison
+const dlCss = `
+.dl{position:fixed;left:50%;bottom:20px;z-index:70;width:min(460px,calc(100% - 24px));padding:16px 18px 14px;border:3.5px solid var(--ink);border-radius:24px;background:var(--cream);box-shadow:6px 7px 0 var(--ink);transform:translate(-50%,150%);transition:transform .45s cubic-bezier(.3,1.5,.5,1)}
+.dl.on{transform:translate(-50%,0)}
+@media (min-width:900px){.dl{left:24px;bottom:24px;transform:translateX(-130%)}.dl.on{transform:none}}
+.dl-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.dl-top b{font:400 21px/1 'Luckiest Guy';letter-spacing:.01em}
+.dl-pct{font:800 15px Poppins}
+.dl-x{width:30px;height:30px;border:2.5px solid var(--ink);border-radius:50%;background:#fff;font:700 13px/1 Poppins;cursor:pointer;margin-left:6px}
+.dl-bar{height:18px;margin:12px 0 14px;border:3px solid var(--ink);border-radius:99px;background:#fff;overflow:hidden}
+.dl-bar i{display:block;height:100%;width:0;border-right:3px solid var(--ink);background:repeating-linear-gradient(-45deg,#FFD23F 0 10px,#FFC233 10px 20px);background-size:28px 28px;animation:dlStripes .8s linear infinite;transition:width .5s ease-out}
+.dl.done .dl-bar i{background:#7CD992;animation:none;border-right:0}
+@keyframes dlStripes{to{background-position:28px 0}}
+.dl-toks{display:flex;justify-content:space-between;gap:6px}
+.dl-t{position:relative;flex:0 0 auto;width:54px;height:54px;border:3px solid var(--ink);border-radius:50%;background:#fff;opacity:.4;filter:grayscale(1);transition:opacity .3s,filter .3s,transform .3s}
+.dl-t img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+.dl-t.busy{opacity:.75;animation:dlBob 1s ease-in-out infinite}
+.dl-t.busy:nth-child(2){animation-delay:-.2s}.dl-t.busy:nth-child(3){animation-delay:-.4s}.dl-t.busy:nth-child(4){animation-delay:-.6s}.dl-t.busy:nth-child(5){animation-delay:-.8s}
+@keyframes dlBob{50%{transform:translateY(-5px)}}
+.dl-t.ok{opacity:1;filter:none;animation:dlPop .5s cubic-bezier(.3,1.8,.5,1)}
+@keyframes dlPop{0%{transform:scale(.6)}100%{transform:scale(1)}}
+.dl-t em{position:absolute;right:-6px;bottom:-5px;display:none;width:24px;height:24px;border:3px solid var(--ink);border-radius:50%;font:800 12px/18px Poppins;font-style:normal;text-align:center;color:#fff}
+.dl-t.ok em{display:block;background:#2BB673}
+.dl-t.err{opacity:.6;filter:grayscale(1)}.dl-t.err em{display:block;background:#E5484D}
+.dl-t small{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:3px;font:700 10px Poppins;white-space:nowrap}
+.dl-msg{margin:24px 0 0;font:600 14px/1.4 Poppins;text-align:center}
+.dl-act{display:flex;justify-content:center;gap:10px;margin-top:10px}
+.dl-act[hidden]{display:none}
+.dl-act a{font:700 14px Poppins;color:var(--ink)}
+`;
+document.head.appendChild(Object.assign(document.createElement('style'), { textContent: dlCss }));
+const dl = Object.assign(document.createElement('div'), { className: 'dl', role: 'status' });
+dl.setAttribute('aria-live', 'polite');
+document.body.appendChild(dl);
+const TOK_IMG = Object.fromEntries((window.__TOKENS || []).map((t) => [t.sym, t.img]));
+let dlShown = 0, dlTarget = 0, dlCap = 0, dlTimer = 0;
+function dlPaint() {
+  dlShown += Math.max(0, Math.min(dlCap, Math.max(dlTarget, dlShown + (dlCap - dlShown) * 0.025)) - dlShown);
+  dl.querySelector('.dl-bar i').style.width = dlShown.toFixed(1) + '%';
+  dl.querySelector('.dl-pct').textContent = Math.round(dlShown) + '%';
+}
+function dlSet(target, cap) { dlTarget = Math.max(dlTarget, target); dlCap = Math.max(dlTarget, cap); if (!dlTimer) dlTimer = setInterval(dlPaint, 150); dlPaint(); }
+function dlOpen(syms) {
+  dl.className = 'dl';
+  dl.innerHTML = `<div class="dl-top"><b>Delivering your tokens</b><span><span class="dl-pct">0%</span><button class="dl-x" type="button" aria-label="Hide">✕</button></span></div>
+    <div class="dl-bar"><i></i></div>
+    <div class="dl-toks">${syms.map((s) => `<span class="dl-t" data-s="${s}">${TOK_IMG[s] ? `<img alt="" src="${TOK_IMG[s]}">` : ''}<em>✓</em><small>${s}</small></span>`).join('')}</div>
+    <p class="dl-msg">Finding your payment on Solana…</p>
+    <div class="dl-act" hidden></div>`;
+  dl.querySelector('.dl-x').onclick = () => dl.classList.remove('on');
+  dlShown = 0; dlTarget = 0; dlCap = 0; clearInterval(dlTimer); dlTimer = 0;
+  requestAnimationFrame(() => dl.classList.add('on'));
+  dlSet(6, 24);
+}
+const dlMsg = (t) => { dl.querySelector('.dl-msg').textContent = t; };
+const okSeen = new Set();
+function dlUpdate(r) {
+  const buys = r.buys || [];
+  const ok = buys.filter((b) => b.tx).length;
+  dl.querySelectorAll('.dl-t').forEach((el) => {
+    const b = buys.find((x) => x.sym === el.dataset.s);
+    el.classList.toggle('busy', r.stage === 'buying' && !!b && !b.tx && !b.error);
+    el.classList.toggle('err', !!(b && b.error));
+    if (b && b.error) el.querySelector('em').textContent = '!';
+    if (b && b.tx && !el.classList.contains('ok')) {
+      el.classList.add('ok');
+      const key = r.id + b.sym;
+      if (!okSeen.has(key)) { okSeen.add(key); window.SFX && SFX.play('clink'); }
+    }
+  });
+  if (r.status === 'open') { dlMsg('Finding your payment on Solana…'); dlSet(6, 24); return; }
+  if (r.status === 'paid') {
+    if (r.stage === 'buying') { dlMsg(`Buying your tokens… ${ok}/${buys.length || 5} in your wallet`); dlSet(42 + ok * 11, 42 + (ok + 1) * 11 - 2); }
+    else if (r.stage === 'refunding') { dlMsg('Sending the rest back to you in SOL…'); dlSet(90, 97); }
+    else { dlMsg('Payment confirmed. Opening your token accounts…'); dlSet(28, 40); }
+  }
+}
+function dlDone(r) {
+  dlUpdate(r);
+  const ok = (r.buys || []).filter((b) => b.tx).length;
+  dlSet(100, 100); dl.classList.add('done');
+  dl.querySelector('.dl-top b').textContent = r.simulated ? 'Test mode' : 'Delivered!';
+  dlMsg(r.simulated ? 'Test mode: nothing was bought for real.'
+    : ok === 5 ? 'All 5 tokens are in your wallet!'
+    : ok ? `${ok} tokens are in your wallet, plus ${sol(r.refunded || 0)} SOL back.`
+    : `${sol(r.refunded || r.value)} SOL sent back to your wallet.`);
+  const act = dl.querySelector('.dl-act');
+  act.innerHTML = r.simulated ? '' : `<a href="https://solscan.io/account/${r.player}#portfolio" target="_blank" rel="noopener">See them on Solscan ↗</a>`;
+  act.hidden = r.simulated;
+  const ps = document.getElementById('pullSub'); // l'étiquette de la machine passe aussi au résultat final
+  if (ps && !ps.hidden) ps.textContent = toResult(r).sub;
+}
+function dlFail(msg, canRetry) {
+  dl.querySelector('.dl-top b').textContent = 'Almost there';
+  dlMsg(msg);
+  const act = dl.querySelector('.dl-act');
+  act.innerHTML = canRetry ? '<button class="btn btn-main sm" type="button">Try again</button>' : '';
+  act.hidden = !canRetry;
+  const b = act.querySelector('button');
+  if (b) b.onclick = () => { const p = pendingRetry; pendingRetry = null; if (p) deliver(p.id, p.signature, true); };
+}
+
+/**
+ * Lance (ou reprend) la livraison et la suit. Renvoie la promesse du résultat pour la machine :
+ * elle se résout dès que le tirage est fait (la boule s'ouvre), la carte continue jusqu'à la fin.
+ */
+function deliver(id, signature, alreadyPopped = false) {
+  dlOpen(['BONK', 'WIF', 'PENGU', 'POPCAT', 'FARTCOIN']);
+  let popped = alreadyPopped, finished = false, popOk, popNo;
+  const pop = new Promise((a, b) => { popOk = a; popNo = b; });
+  const onRound = (r) => {
+    if (finished || !r || !r.status) return;
+    if (r.buys && r.buys.length) {
+      const order = r.buys.map((b) => b.sym);
+      const box = dl.querySelector('.dl-toks'); // même ordre que les achats du serveur
+      order.forEach((sym) => { const el = box.querySelector(`[data-s="${sym}"]`); if (el) box.appendChild(el); });
+    }
+    dlUpdate(r);
+    if (!popped && r.rarity && r.status !== 'open' && r.status !== 'failed') { popped = true; popOk(toResult(r)); }
+    if (r.status === 'done') { finished = true; dlDone(r); pendingRetry = null; }
+    if (r.status === 'failed') {
+      finished = true; pendingRetry = { id, signature };
+      dlFail('Delivery hit a snag. Your payment is safe: tap Try again to finish it.', true);
+      if (!popped) { popped = true; popNo(new Error('Delivery hit a snag. Your payment is safe: tap Try again to finish it.')); }
+    }
   };
+  api(`/api/round/${id}/paid`, { signature }).then(onRound).catch((e) => {
+    // refus net avant le tirage (paiement introuvable, déjà utilisé…) : on s'arrête là
+    if (!popped && !/Server error/.test(e.message)) { finished = true; dlFail(e.message, false); popped = true; popNo(e); }
+  });
+  (async () => {
+    const t0 = Date.now();
+    while (!finished && Date.now() - t0 < 150000) {
+      await wait(1500);
+      try { onRound(await GET(`/api/round/${id}`)); } catch {}
+    }
+    if (!finished) {
+      finished = true; pendingRetry = { id, signature };
+      dlFail('Still working on it. Your payment is safe: tap Try again in a minute.', true);
+      if (!popped) { popped = true; popNo(new Error('Still working on it. Your payment is safe: tap Try again in a minute.')); }
+    }
+  })();
+  return pop;
 }
-function deliver(id, signature) {
-  const work = api(`/api/round/${id}/paid`, { signature }).then(async (r) => {
-    // une autre livraison de ce tirage est en cours : on attend son résultat
-    for (let i = 0; i < 40 && (r.status === 'paid' || r.status === 'open'); i++) { await new Promise((ok) => setTimeout(ok, 3000)); r = await GET(`/api/round/${id}`); }
-    return r;
-  }).then(toResult);
-  const slow = new Promise((_, no) => setTimeout(() => { pendingRetry = { id, signature }; no(new Error('Still working on it. Your payment is safe: tap Try again in a minute.')); }, 150000));
-  return Promise.race([work, slow]);
-}
+
 // reprise : page ouverte avec ?r=<tirage> (après un rechargement, ou depuis un lien)
 async function resume(id) {
   let r;
   try { r = await GET(`/api/round/${id}`); } catch { return; }
   if (r.status === 'open') return; // jamais payé : rien à reprendre
-  for (let i = 0; !window.__machine && i < 50; i++) await new Promise((ok) => setTimeout(ok, 200));
+  for (let i = 0; !window.__machine && i < 50; i++) await wait(200);
   if (!window.__machine) return;
-  if (r.status === 'done') { window.__machine.play(Promise.resolve(toResult(r))); return; }
+  if (r.status === 'done') { window.__machine.play(Promise.resolve(toResult(r))); dlOpen((r.buys || []).map((b) => b.sym)); dlDone(r); return; }
   window.__machine.play(deliver(id, r.signature));
 }
 const RID = new URLSearchParams(location.search).get('r');

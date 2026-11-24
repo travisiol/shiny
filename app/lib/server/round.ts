@@ -16,7 +16,7 @@ export type Round = {
   id: string; ball: Ball; player: string; price: number; createdAt: number;
   seedHash: string; seed: string; status: RoundStatus;
   signature?: string; u?: number; rarity?: Rarity; mult?: number; value?: number;
-  buys?: Buy[]; ataTx?: string; refundTx?: string; refunded?: number; simulated?: boolean; error?: string; doneAt?: number;
+  stage?: "accounts" | "buying" | "refunding"; buys?: Buy[]; ataTx?: string; refundTx?: string; refunded?: number; simulated?: boolean; error?: string; doneAt?: number;
 };
 
 const MEMO = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
@@ -106,11 +106,14 @@ export async function confirmRound(id: string, signature: string): Promise<Round
   r.status = "paid";
   await db.set("round:" + id, r, ROUND_TTL);
 
+  const t = tracker(r);
   try {
     await db.incr(hourKey(), r.value / LAMPORTS_PER_SOL, 3600);
-    const res = await payout(r);
-    Object.assign(r, res, { status: "done" });
+    const res = await payout(r, t.save);
+    await t.flush();
+    Object.assign(r, res, { status: "done", stage: undefined });
   } catch (e) {
+    await t.flush();
     r.status = "failed";
     r.error = (e as Error).message.slice(0, 300);
   }
@@ -120,6 +123,17 @@ export async function confirmRound(id: string, signature: string): Promise<Round
   return r;
 }
 
+/** Enregistre l'avancement de la livraison dans l'ordre, sans bloquer les achats. */
+function tracker(r: Round) {
+  let chain: Promise<unknown> = Promise.resolve();
+  const save = (patch: Partial<Round>) => {
+    Object.assign(r, patch);
+    const snap = JSON.parse(JSON.stringify(r));
+    chain = chain.then(() => db.set("round:" + r.id, snap, ROUND_TTL)).catch(() => {});
+  };
+  return { save, flush: () => chain };
+}
+
 const delivered = (r: Round) => !!(r.refundTx || r.buys?.some((b) => b.tx));
 
 async function redeliver(r: Round): Promise<Round> {
@@ -127,10 +141,13 @@ async function redeliver(r: Round): Promise<Round> {
   try {
     r.status = "paid"; r.error = undefined;
     await db.set("round:" + r.id, r, ROUND_TTL);
+    const t = tracker(r);
     try {
-      const res = await payout(r);
-      Object.assign(r, res, { status: "done" });
+      const res = await payout(r, t.save);
+      await t.flush();
+      Object.assign(r, res, { status: "done", stage: undefined });
     } catch (e) {
+      await t.flush();
       r.status = "failed";
       r.error = (e as Error).message.slice(0, 300);
     }
@@ -148,6 +165,7 @@ export function publicRound(r: Round) {
   return {
     id: r.id, ball: r.ball, status: r.status, player: r.player, price: r.price / LAMPORTS_PER_SOL,
     seedHash: r.seedHash, seed: revealed ? r.seed : undefined, signature: r.signature,
+    stage: r.status === "paid" ? r.stage : undefined,
     rarity: r.rarity, mult: r.mult, value: r.value !== undefined ? r.value / LAMPORTS_PER_SOL : undefined,
     buys: r.buys, refunded: r.refunded !== undefined ? r.refunded / LAMPORTS_PER_SOL : undefined, simulated: r.simulated,
     error: r.status === "failed" ? "Delivery failed on our side. Your payment is safe: tap Try again to finish it." : undefined,

@@ -84,7 +84,10 @@ function pickTokens(r: Round) {
   return ranked.sort((a, b) => a.k - b.k).slice(0, PER_BALL).map((x) => x.t);
 }
 
-export async function payout(r: Round): Promise<Partial<Round>> {
+/** Avancement de la livraison, enregistré au fur et à mesure pour que la page affiche la barre `[F-123]`. */
+export type Progress = (patch: Partial<Round>) => void;
+
+export async function payout(r: Round, progress: Progress = () => {}): Promise<Partial<Round>> {
   const value = r.value!;
   const tokens = pickTokens(r);
   const player = new PublicKey(r.player);
@@ -100,6 +103,7 @@ export async function payout(r: Round): Promise<Partial<Round>> {
 
   const kp = payoutKeypair();
   const c = conn();
+  progress({ stage: "accounts" });
   // 1. les comptes de tokens du joueur (créés s'ils n'existent pas, payés par le wallet de gains)
   const mintInfos = await c.getMultipleAccountsInfo(tokens.map((t) => new PublicKey(t.mint)));
   const progs = mintInfos.map((m) => (m?.owner.equals(TOKEN_2022_PROGRAM_ID) ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID));
@@ -114,6 +118,7 @@ export async function payout(r: Round): Promise<Partial<Round>> {
       ataTx = await sendIxs(missing.map(({ a, i }) => createAssociatedTokenAccountIdempotentInstruction(kp.publicKey, a, player, new PublicKey(tokens[i].mint), progs[i])), kp, 40_000 * missing.length + 10_000);
     } catch {
       // filet de sécurité : sans comptes, pas d'achat possible → la valeur part en SOL dans le wallet du joueur
+      progress({ stage: "refunding" });
       const refundTx = await refundSol(kp, player, value);
       return { buys: [], refundTx, refunded: value, simulated: false };
     }
@@ -125,25 +130,30 @@ export async function payout(r: Round): Promise<Partial<Round>> {
   // part trop petite pour un achat sensé (< 0,0002 SOL par token) : tout est rendu en SOL, rien n'est acheté
   if (share < 200_000) {
     if (spend <= 0) return { buys: [], ataTx, simulated: false };
+    progress({ stage: "refunding", ataTx });
     const refundTx = await refundSol(kp, player, spend);
     return { buys: [], ataTx, refundTx, refunded: spend, simulated: false };
   }
-  // 3. un achat Jupiter par token, livré directement dans le compte du joueur
-  const buys: Buy[] = [];
-  let unspent = 0;
-  for (let i = 0; i < tokens.length; i++) {
-    const t = tokens[i];
+  // 3. un achat Jupiter par token, livré directement dans le compte du joueur ; les 5 en même temps (~10 s au lieu de ~30 s)
+  const live: Buy[] = tokens.map((t) => ({ sym: t.sym, mint: t.mint, lamports: share })); // sans tx ni erreur = en cours
+  progress({ stage: "buying", ataTx, buys: live.map((b) => ({ ...b })) });
+  const buys: Buy[] = await Promise.all(tokens.map(async (t, i) => {
+    let b: Buy;
     try {
       const { sig, out } = await buyOne(t.mint, share, atas[i], kp);
-      buys.push({ sym: t.sym, mint: t.mint, lamports: share, out, tx: sig });
+      b = { sym: t.sym, mint: t.mint, lamports: share, out, tx: sig };
     } catch (e) {
-      unspent += share;
-      buys.push({ sym: t.sym, mint: t.mint, lamports: share, error: (e as Error).message.slice(0, 120) });
+      b = { sym: t.sym, mint: t.mint, lamports: share, error: (e as Error).message.slice(0, 120) };
     }
-  }
+    live[i] = b;
+    progress({ buys: live.map((x) => ({ ...x })) }); // un token de plus est arrivé (ou a échoué)
+    return b;
+  }));
+  const unspent = buys.filter((b) => !b.tx).reduce((a, b) => a + b.lamports, 0);
   // 4. ce qui n'a pas pu être acheté est rendu en SOL : le joueur reçoit toujours sa valeur
   let refundTx: string | undefined;
   if (unspent > 0) {
+    progress({ stage: "refunding" });
     refundTx = await refundSol(kp, player, unspent);
   }
   return { buys, ataTx, refundTx, refunded: unspent || undefined, simulated: false };

@@ -176,6 +176,9 @@ section h2.toon{margin:0;font-size:clamp(52px,6.4vw,96px)}
 .snd[aria-pressed=false]{background:var(--cream)}
 .snd[aria-pressed=false] .x{display:block}
 .snd[aria-pressed=false] .eq{display:none}
+/* son bloqué par le navigateur tant qu'on n'a pas cliqué : le bouton invite à cliquer `[F-123]` */
+.snd.wait{animation:sndWait 1.3s ease-in-out infinite}
+@keyframes sndWait{50%{transform:scale(1.07) rotate(-2deg);box-shadow:4px 6px 0 var(--ink)}}
 @media (max-width:480px){.hdr-r{gap:8px}.hdr-r .btn{white-space:nowrap;padding-left:12px;padding-right:12px;font-size:13px}header .logo{font-size:24px}header .logo svg{width:26px;height:26px}}
 @media (max-width:900px){.snd .lbl{display:none}.snd{padding:0 11px}}
 /* fin */
@@ -631,7 +634,7 @@ window.SFX = (() => {
   // la musique démarre au premier clic (règle des navigateurs), se coupe quand l'onglet est caché
   const gesture = () => {
     acted = true; unlock();
-    if (ctx) Promise.resolve(ctx.resume()).then(musicStart, musicStart);
+    if (ctx) Promise.resolve(ctx.resume()).then(musicStart, musicStart).then(() => window.__sndWait && window.__sndWait());
   };
   ['pointerdown', 'keydown', 'touchend'].forEach((ev) => addEventListener(ev, gesture, { capture: true, passive: true }));
   // à l'ouverture : si le navigateur autorise déjà le son (site sur lequel on a déjà cliqué), la musique part toute seule
@@ -661,6 +664,10 @@ window.SFX = (() => {
   const btn = document.getElementById('sndBtn');
   const sync = () => { btn.setAttribute('aria-pressed', String(on)); btn.setAttribute('aria-label', on ? 'Mute music and sounds' : 'Turn music and sounds on'); };
   btn.addEventListener('click', () => { api.toggle(); sync(); }); sync();
+  // tant que le navigateur bloque le son : le bouton clignote « Tap for music »
+  const lbl = btn.querySelector('.lbl');
+  window.__sndWait = () => { const w = on && !(ctx && ctx.state === 'running'); btn.classList.toggle('wait', w); if (lbl) lbl.textContent = w ? 'Tap for music' : 'Music'; };
+  window.__sndWait(); setTimeout(window.__sndWait, 600);
   return api;
 })();
 </script>
