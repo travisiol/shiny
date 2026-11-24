@@ -17,6 +17,13 @@ window.dispatchEvent(new CustomEvent('wallet-standard:app-ready', { detail: reg 
 const usable = () => wallets.filter((w) => w.features && w.features['standard:connect'] && w.features['solana:signAndSendTransaction'] && (w.chains || []).some((c) => c.startsWith('solana:')));
 
 let wallet = null, account = null, ball = 'MINI', busy = false, msg = '';
+// boules ouvertes ou non (réserve suffisante côté serveur) `[F-127]`
+let closed = {};
+async function refreshStatus() {
+  try { const j = await (await fetch('/api/status', { cache: 'no-store' })).json(); closed = Object.fromEntries(Object.entries(j.balls || {}).filter(([, v]) => v !== 'open')); } catch { closed = {}; }
+  if (closed[ball]) { const firstOpen = BALLS.find((b) => !closed[b.k]); if (firstOpen) ball = firstOpen.k; }
+  render();
+}
 
 // ---------- base58 (signature de la transaction → texte)
 const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
@@ -43,6 +50,8 @@ const css = `
 .sh-ball{padding:12px 6px 10px;border:3px solid var(--ink);border-radius:18px;background:#fff;cursor:pointer;text-align:center;box-shadow:3px 4px 0 var(--ink);transition:transform .15s}
 .sh-ball:hover{transform:translateY(-2px)}
 .sh-ball[aria-pressed=true]{background:var(--sun);transform:translateY(-3px) rotate(-2deg)}
+.sh-ball[disabled]{opacity:.45;cursor:not-allowed;transform:none;box-shadow:1px 2px 0 var(--ink)}
+.sh-ball[disabled] small{opacity:1;font-weight:700}
 .sh-ball i{display:block;width:34px;height:34px;margin:0 auto 6px;border:3px solid var(--ink);border-radius:50%;background:linear-gradient(var(--c) 50%,#fff 50%)}
 .sh-ball b{display:block;font:400 18px/1 'Luckiest Guy'}
 .sh-ball span{display:block;margin-top:3px;font:700 13px Poppins}
@@ -68,7 +77,8 @@ const sheet = back.firstChild;
 function render() {
   if (!sheet) return;
   const ws = usable();
-  const balls = BALLS.map((b) => `<button class="sh-ball" type="button" data-b="${b.k}" aria-pressed="${b.k === ball}" style="--c:${b.col}"><i></i><b>${b.k}</b><span>${b.price}</span><small>x5+ ${b.big}</small></button>`).join('');
+  const balls = BALLS.map((b) => `<button class="sh-ball" type="button" data-b="${b.k}" aria-pressed="${b.k === ball}" style="--c:${b.col}" ${closed[b.k] ? 'disabled title="Refilling: back soon"' : ''}><i></i><b>${b.k}</b><span>${b.price}</span><small>${closed[b.k] ? 'Back soon' : `x5+ ${b.big}`}</small></button>`).join('');
+  const allClosed = BALLS.every((b) => closed[b.k]);
   let walletPart;
   if (account) walletPart = `<div class="sh-acct"><span>${wallet.icon ? `<img alt="" src="${esc(wallet.icon)}" style="width:20px;height:20px;border-radius:5px;vertical-align:-4px;margin-right:6px">` : ''}${short(account.address)}</span><button type="button" data-a="switch">Switch</button></div>`;
   else if (ws.length) walletPart = `<div class="sh-w">${ws.map((w, i) => `<button class="sh-wbtn" type="button" data-w="${i}">${w.icon ? `<img alt="" src="${esc(w.icon)}">` : ''}Connect ${esc(w.name)}</button>`).join('')}</div>`;
@@ -77,7 +87,7 @@ function render() {
   sheet.innerHTML = `<button class="sh-x" type="button" data-a="close" aria-label="Close">✕</button>
     <h3 id="shT">Pick your ball</h3><p class="lead2">Five real memecoins inside, bought the second it pops.</p>
     <div class="sh-balls" style="--n:${BALLS.length}">${balls}</div>${walletPart}
-    <button class="btn btn-main sh-go" type="button" data-a="pay" ${!account || busy ? 'disabled' : ''}>${busy ? 'Check your wallet…' : `Pop it! · ${price}`}</button>
+    <button class="btn btn-main sh-go" type="button" data-a="pay" ${!account || busy || allClosed || closed[ball] ? 'disabled' : ''}>${busy ? 'Check your wallet…' : allClosed ? 'The machine is refilling' : `Pop it! · ${price}`}</button>
     <p class="sh-msg" aria-live="polite">${msg}</p>
     <p class="sh-fine">18+ only. Memecoins are volatile: your tokens can be worth less than you paid. Odds and every draw are public. Not financial advice.</p>`;
 }
@@ -85,7 +95,7 @@ function render() {
 function open() {
   if (window.__machine && window.__machine.busy()) return;
   if (pendingRetry) { const p = pendingRetry; pendingRetry = null; window.__machine.play(deliver(p.id, p.signature)); return; }
-  msg = ''; render(); back.classList.add('on');
+  msg = ''; render(); back.classList.add('on'); refreshStatus();
   setTimeout(() => sheet.querySelector('.sh-ball[aria-pressed=true]')?.focus(), 50);
 }
 const close = () => { if (!busy) back.classList.remove('on'); };
@@ -94,7 +104,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); }
 
 sheet.addEventListener('click', async (e) => {
   const t = e.target.closest('button'); if (!t) return;
-  if (t.dataset.b) { ball = t.dataset.b; render(); return; }
+  if (t.dataset.b) { if (closed[t.dataset.b]) return; ball = t.dataset.b; render(); return; }
   if (t.dataset.a === 'close') return close();
   if (t.dataset.a === 'switch') { account = null; wallet = null; render(); return; }
   if (t.dataset.w) return connect(usable()[Number(t.dataset.w)]);
