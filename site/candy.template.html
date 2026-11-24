@@ -836,13 +836,13 @@ function paint(hex, common) {
   coins.forEach(({ rimM }) => rimM.color.setHex(common ? 0xffd23f : hex));
   ring.material.color.setHex(hex);
 }
-function begin(res) {
+function begin(res, real) {
   paint(res ? RCOL[res.n] : 0xffa4b2, !!res && res.n === 'Common');
   ball.userData.topG.position.set(0, 0, 0); ball.userData.topG.rotation.set(0, 0, 0); ball.userData.bot.position.set(0, 0, 0);
   coins.forEach(({ coin }) => (coin.visible = false)); stars.forEach(({ s }) => (s.visible = false));
   pullEl.classList.remove('on');
   document.querySelector('.hero').classList.add('playing');
-  anim = { t0: performance.now(), res, done: false, burst: false, pending: !res };
+  anim = { t0: performance.now(), res, done: false, burst: false, pending: !res, real: !!real };
   window.SFX && SFX.pullStart();
 }
 const busy = () => !!(anim && !anim.done);
@@ -852,11 +852,13 @@ function start() { if (window.__onTurn) return window.__onTurn(); demo(); }
 document.getElementById('turnBtn').addEventListener('click', start);
 document.getElementById('againBtn').addEventListener('click', () => { pullEl.classList.remove('on'); if (window.__onTurn) return window.__onTurn(); anim = null; setTimeout(demo, 200); });
 // API pour play.js : lance la manivelle tout de suite, ouvre la boule sur le vrai résultat quand il arrive
+// seul un vrai tirage en cours bloque : la démo s'interrompt dès qu'un joueur achète
+const busyReal = () => !!(anim && anim.real && !anim.done);
 window.__machine = {
-  busy,
+  busy: busyReal,
   play(promise) {
-    if (busy()) return false;
-    begin(null);
+    if (busyReal()) return false;
+    begin(null, true);
     const a = anim;
     promise.then((res) => { if (anim !== a) return; paint(RCOL[res.n], res.n === 'Common'); a.res = res; a.pending = false; })
       .catch((err) => { if (anim !== a) return; a.pending = false; a.error = (err && err.message) || 'Something went wrong'; });
