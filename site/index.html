@@ -537,13 +537,13 @@ if (window.gsap && !reduce) {
    Le navigateur n'autorise le son qu'après un premier clic : la démo automatique du chargement reste muette,
    chaque vrai tour de manivelle sonne. */
 window.SFX = (() => {
-  let ctx = null, master = null, nbuf = null, on = true;
+  // acted = le visiteur a cliqué ou tapé une touche : avant ça, aucun bruitage (la musique, elle, peut démarrer si le navigateur l'autorise) `[F-121]`
+  let ctx = null, master = null, nbuf = null, on = true, acted = false;
   try { on = localStorage.getItem('shiny-sound') !== 'off'; } catch (e) {}
   const unlock = () => {
     if (!ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; ctx = new AC(); master = ctx.createGain(); master.gain.value = 0.5; master.connect(ctx.destination); }
     if (ctx.state === 'suspended') ctx.resume();
   };
-  ['pointerdown', 'keydown', 'touchstart'].forEach((ev) => addEventListener(ev, unlock, { capture: true, passive: true }));
   const at = (d) => ctx.currentTime + 0.01 + (d || 0);
   function tone(t, f0, f1, dur, type, vol, atk) {
     const o = ctx.createOscillator(), g = ctx.createGain();
@@ -629,16 +629,24 @@ window.SFX = (() => {
     setTimeout(() => m.bus.disconnect(), 600);
   }
   // la musique démarre au premier clic (règle des navigateurs), se coupe quand l'onglet est caché
-  ['pointerdown', 'keydown', 'touchstart'].forEach((ev) => addEventListener(ev, () => setTimeout(musicStart, 0), { passive: true }));
+  const gesture = () => {
+    acted = true; unlock();
+    if (ctx) Promise.resolve(ctx.resume()).then(musicStart, musicStart);
+  };
+  ['pointerdown', 'keydown', 'touchend'].forEach((ev) => addEventListener(ev, gesture, { capture: true, passive: true }));
+  // à l'ouverture : si le navigateur autorise déjà le son (site sur lequel on a déjà cliqué), la musique part toute seule
+  try { unlock(); if (ctx && ctx.state === 'running') musicStart(); } catch (e) {}
   document.addEventListener('visibilitychange', () => { if (!ctx) return; if (document.hidden) ctx.suspend(); else ctx.resume(); });
 
   const api = {
-    play(name, ...a) { if (on && ctx) try { S[name](...a); } catch (e) {} },
+    play(name, ...a) { if (on && ctx && acted) try { S[name](...a); } catch (e) {} },
     // un tirage complet, calé sur l'animation de la machine (T.crank, T.drop, T.rise, T.shake, T.pop)
     pullStart() { api.play('coin', 0); api.play('crank', 0.12, 0.9); api.play('drop', 1.0); api.play('whistle', 1.6, 0.6); api.play('rattle', 2.2, 0.72); },
     get on() { return on; },
+    // état du son (lecture seule, pour vérifier) : clic reçu ?, contexte audio, musique en cours
+    get state() { return { acted, audio: ctx ? ctx.state : 'none', music: !!mus }; },
     get ready() { return !!ctx && ctx.state === 'running'; },
-    toggle() { on = !on; try { localStorage.setItem('shiny-sound', on ? 'on' : 'off'); } catch (e) {} unlock(); if (on) { api.play('coin', 0); setTimeout(musicStart, 0); } else musicStop(); return on; }
+    toggle() { acted = true; on = !on; try { localStorage.setItem('shiny-sound', on ? 'on' : 'off'); } catch (e) {} unlock(); if (on) { api.play('coin', 0); setTimeout(musicStart, 0); } else musicStop(); return on; }
   };
   // sons des boutons : survol et appui (un seul son par entrée, pas de rafale) `[F-114]`
   const HOV = '.btn, button, nav a, .logo, #vChap button';
