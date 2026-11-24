@@ -32,7 +32,7 @@ En local, `DEV_FAKE_PAYMENTS=true` permet de tester sans payer : une signature q
 - Base de données : Upstash Redis **shiny-redis** (plan gratuit, iad1), créée via Vercel. Variables `KV_REST_API_*`.
 - Toutes les variables sont posées, y compris `SOLANA_RPC_URL` et `JUPITER_API_KEY` (les mêmes que Vigil).
 - Tâche de reversement (option B) : une fois par jour, car le plan Vercel gratuit n'autorise rien de plus fréquent.
-- Mode : **live** depuis le 24 nov. : vrais achats et vrais envois. La boule Test (lien privé) achète aussi de vrais tokens ; la maison lui paie l'ouverture des comptes (environ 0,01 SOL par essai).
+- Mode : **live** depuis le 24 nov. : vrais achats et vrais envois. (La boule Test à 0,01 SOL a servi au premier essai réel, puis a été retirée.)
 
 ## Ce qui reste (à faire par toi)
 1. **Financer le wallet de gains** `3FD4hsBHS7z4D2nmSmi7nMH1wdGQ2RbrT9EdK5dUCFUx` depuis Phantom. En mode `live`, la machine refuse une boule tant que ce wallet ne peut pas payer son pire cas (x10) :
