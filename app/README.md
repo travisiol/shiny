@@ -18,7 +18,7 @@ En local, `DEV_FAKE_PAYMENTS=true` permet de tester sans payer : une signature q
 | `GET /api/round/:id` | Le tirage public (graine révélée après coup : chacun peut refaire le calcul) |
 | `GET /api/log` | Les 50 derniers tirages |
 | `GET /api/status` | La machine est-elle ouverte, boule par boule |
-| `GET /api/cron/sweep` | Option B : le surplus part vers la trésorerie, toutes les heures |
+| `GET /api/cron/sweep` | Option B : le surplus part vers la trésorerie, une fois par jour (plan Vercel gratuit) |
 
 ## Déjà fait (24 nov.)
 - Dépôt git local `projets/Packs` (branche `main`), sans aucun secret.

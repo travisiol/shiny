@@ -5,8 +5,8 @@ import { conn, CRON_SECRET, PAY_TO, payoutKeypair, RESERVE_SOL, treasury } from 
 export const dynamic = "force-dynamic";
 
 /**
- * Option B (PAY_TO=payout) : toutes les heures, le surplus au-dessus de la réserve part vers la trésorerie.
- * Appelé par la tâche horaire Vercel (vercel.json), protégé par CRON_SECRET.
+ * Option B (PAY_TO=payout) : chaque jour (plan Vercel gratuit : une tâche par jour), le surplus au-dessus de la réserve part vers la trésorerie.
+ * Appelé par la tâche quotidienne Vercel (vercel.json), protégé par CRON_SECRET.
  */
 export async function GET(req: Request) {
   if (!CRON_SECRET || req.headers.get("authorization") !== `Bearer ${CRON_SECRET}`) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
