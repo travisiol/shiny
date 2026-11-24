@@ -88,6 +88,8 @@ export function drawU(seed: string, signature: string) {
 export async function confirmRound(id: string, signature: string): Promise<Round> {
   const r = await db.get<Round>("round:" + id);
   if (!r) throw new UserError("Round not found");
+  // tirage payé mais jamais livré (envoi tombé en panne) : on relance la livraison, avec le même tirage `[F-122]`
+  if (r.status === "failed" && signature === r.signature && !delivered(r)) return redeliver(r);
   if (r.status !== "open") return r; // déjà traité : on renvoie le résultat
   if (typeof signature !== "string" || signature.length < 20 || signature.length > 120) throw new UserError("Bad signature");
 
@@ -118,6 +120,28 @@ export async function confirmRound(id: string, signature: string): Promise<Round
   return r;
 }
 
+const delivered = (r: Round) => !!(r.refundTx || r.buys?.some((b) => b.tx));
+
+async function redeliver(r: Round): Promise<Round> {
+  if (!(await db.claim("deliver:" + r.id, "1"))) return r; // une livraison est déjà en cours
+  try {
+    r.status = "paid"; r.error = undefined;
+    await db.set("round:" + r.id, r, ROUND_TTL);
+    try {
+      const res = await payout(r);
+      Object.assign(r, res, { status: "done" });
+    } catch (e) {
+      r.status = "failed";
+      r.error = (e as Error).message.slice(0, 300);
+    }
+    r.doneAt = Date.now();
+    await db.set("round:" + r.id, r, ROUND_TTL);
+    return r;
+  } finally {
+    await db.del("deliver:" + r.id);
+  }
+}
+
 /** Ce que tout le monde peut voir d'un tirage. La graine n'est révélée qu'une fois le tirage fait. */
 export function publicRound(r: Round) {
   const revealed = r.status !== "open";
@@ -126,6 +150,6 @@ export function publicRound(r: Round) {
     seedHash: r.seedHash, seed: revealed ? r.seed : undefined, signature: r.signature,
     rarity: r.rarity, mult: r.mult, value: r.value !== undefined ? r.value / LAMPORTS_PER_SOL : undefined,
     buys: r.buys, refunded: r.refunded !== undefined ? r.refunded / LAMPORTS_PER_SOL : undefined, simulated: r.simulated,
-    error: r.status === "failed" ? "Something went wrong on our side. Your payment is safe: we will make it right." : undefined,
+    error: r.status === "failed" ? "Delivery failed on our side. Your payment is safe: tap Try again to finish it." : undefined,
   };
 }

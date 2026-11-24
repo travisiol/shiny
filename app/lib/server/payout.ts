@@ -1,5 +1,5 @@
 import "server-only";
-import { PublicKey, SystemProgram, Transaction, VersionedTransaction, type Keypair } from "@solana/web3.js";
+import { ComputeBudgetProgram, PublicKey, SystemProgram, Transaction, VersionedTransaction, type Keypair, type TransactionInstruction } from "@solana/web3.js";
 import { createAssociatedTokenAccountIdempotentInstruction, getAssociatedTokenAddressSync, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { ATA_RENT, conn, JUP_KEY, PAYOUT_MODE, payoutKeypair } from "./config";
 import { PER_BALL, TOKENS } from "./tables";
@@ -22,14 +22,60 @@ async function quote(mint: string, lamports: number) {
   return r.json();
 }
 
-async function sendSigned(tx: VersionedTransaction | Transaction, kp: Keypair) {
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Envoie une transaction signée et la renvoie toutes les 2 s jusqu'à ce qu'elle soit confirmée,
+ * ou jusqu'à ce que son blockhash expire (elle ne pourra alors plus jamais passer : on peut en refaire une) `[F-122]`.
+ */
+async function land(raw: Uint8Array, lastValidBlockHeight: number): Promise<string | null> {
   const c = conn();
-  if (tx instanceof VersionedTransaction) tx.sign([kp]); else tx.sign(kp);
-  const sig = await c.sendRawTransaction(tx.serialize(), { skipPreflight: false, maxRetries: 3 });
-  const bh = await c.getLatestBlockhash("confirmed");
-  const res = await c.confirmTransaction({ signature: sig, ...bh }, "confirmed");
-  if (res.value.err) throw new Error("tx failed " + sig);
-  return sig;
+  const sig = await c.sendRawTransaction(raw, { skipPreflight: false, maxRetries: 0 });
+  for (;;) {
+    await wait(2000);
+    const st = (await c.getSignatureStatuses([sig])).value[0];
+    if (st?.err) throw new Error("tx failed " + sig);
+    if (st && (st.confirmationStatus === "confirmed" || st.confirmationStatus === "finalized")) return sig;
+    if ((await c.getBlockHeight("confirmed")) > lastValidBlockHeight) return null; // expirée sans passer
+    await c.sendRawTransaction(raw, { skipPreflight: true, maxRetries: 0 }).catch(() => {});
+  }
+}
+
+/** Transaction simple du wallet de gains (comptes de tokens, remboursement) : frais prioritaires, 3 essais avec un blockhash neuf. */
+async function sendIxs(ixs: TransactionInstruction[], kp: Keypair, cuLimit: number) {
+  const c = conn();
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { blockhash, lastValidBlockHeight } = await c.getLatestBlockhash("confirmed");
+    const tx = new Transaction({ feePayer: kp.publicKey, recentBlockhash: blockhash })
+      .add(ComputeBudgetProgram.setComputeUnitLimit({ units: cuLimit }))
+      .add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 400_000 }))
+      .add(...ixs);
+    tx.sign(kp);
+    const sig = await land(tx.serialize(), lastValidBlockHeight);
+    if (sig) return sig;
+  }
+  throw new Error("transaction did not land after 3 tries");
+}
+
+const refundSol = (kp: Keypair, player: PublicKey, lamports: number) =>
+  sendIxs([SystemProgram.transfer({ fromPubkey: kp.publicKey, toPubkey: player, lamports })], kp, 1_000);
+
+/** Un achat Jupiter livré dans le compte du joueur : nouveau devis + nouvelle transaction si la précédente expire. */
+async function buyOne(mint: string, lamports: number, dest: PublicKey, kp: Keypair) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const q = await quote(mint, lamports);
+    const s = await fetch(`${JUP}/swap`, {
+      method: "POST", headers: { "Content-Type": "application/json", ...jupHeaders() }, signal: AbortSignal.timeout(10000),
+      body: JSON.stringify({ quoteResponse: q, userPublicKey: kp.publicKey.toBase58(), destinationTokenAccount: dest.toBase58(), wrapAndUnwrapSol: true, dynamicComputeUnitLimit: true, prioritizationFeeLamports: { priorityLevelWithMaxLamports: { maxLamports: 300_000, priorityLevel: "veryHigh" } } }),
+    });
+    if (!s.ok) throw new Error(`swap ${s.status}`);
+    const { swapTransaction, lastValidBlockHeight } = await s.json();
+    const tx = VersionedTransaction.deserialize(Buffer.from(swapTransaction, "base64"));
+    tx.sign([kp]);
+    const sig = await land(tx.serialize(), Number(lastValidBlockHeight) || (await conn().getBlockHeight("confirmed")) + 150);
+    if (sig) return { sig, out: String(q.outAmount) };
+  }
+  throw new Error("swap did not land after 3 tries");
 }
 
 /** Ordre des tokens propre à ce tirage, dérivé de la même graine (prouvable aussi). */
@@ -64,10 +110,13 @@ export async function payout(r: Round): Promise<Partial<Round>> {
   let rent = 0;
   if (missing.length) {
     rent = missing.length * (await c.getMinimumBalanceForRentExemption(165));
-    const { blockhash } = await c.getLatestBlockhash("confirmed");
-    const tx = new Transaction({ feePayer: kp.publicKey, recentBlockhash: blockhash });
-    missing.forEach(({ a, i }) => tx.add(createAssociatedTokenAccountIdempotentInstruction(kp.publicKey, a, player, new PublicKey(tokens[i].mint), progs[i])));
-    ataTx = await sendSigned(tx, kp);
+    try {
+      ataTx = await sendIxs(missing.map(({ a, i }) => createAssociatedTokenAccountIdempotentInstruction(kp.publicKey, a, player, new PublicKey(tokens[i].mint), progs[i])), kp, 40_000 * missing.length + 10_000);
+    } catch {
+      // filet de sécurité : sans comptes, pas d'achat possible → la valeur part en SOL dans le wallet du joueur
+      const refundTx = await refundSol(kp, player, value);
+      return { buys: [], refundTx, refunded: value, simulated: false };
+    }
   }
   // 2. la valeur à acheter (moins l'ouverture des comptes si ATA_RENT=deduct : ce SOL reste au joueur, il le récupère en fermant le compte)
   // boule d'essai : la maison paie l'ouverture des comptes, sinon 0,01 SOL ne suffirait pas à acheter quoi que ce soit
@@ -76,8 +125,7 @@ export async function payout(r: Round): Promise<Partial<Round>> {
   // part trop petite pour un achat sensé (< 0,0002 SOL par token) : tout est rendu en SOL, rien n'est acheté
   if (share < 200_000) {
     if (spend <= 0) return { buys: [], ataTx, simulated: false };
-    const { blockhash } = await c.getLatestBlockhash("confirmed");
-    const refundTx = await sendSigned(new Transaction({ feePayer: kp.publicKey, recentBlockhash: blockhash }).add(SystemProgram.transfer({ fromPubkey: kp.publicKey, toPubkey: player, lamports: spend })), kp);
+    const refundTx = await refundSol(kp, player, spend);
     return { buys: [], ataTx, refundTx, refunded: spend, simulated: false };
   }
   // 3. un achat Jupiter par token, livré directement dans le compte du joueur
@@ -86,16 +134,8 @@ export async function payout(r: Round): Promise<Partial<Round>> {
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
     try {
-      const q = await quote(t.mint, share);
-      const s = await fetch(`${JUP}/swap`, {
-        method: "POST", headers: { "Content-Type": "application/json", ...jupHeaders() }, signal: AbortSignal.timeout(10000),
-        body: JSON.stringify({ quoteResponse: q, userPublicKey: kp.publicKey.toBase58(), destinationTokenAccount: atas[i].toBase58(), wrapAndUnwrapSol: true, dynamicComputeUnitLimit: true, prioritizationFeeLamports: { priorityLevelWithMaxLamports: { maxLamports: 200_000, priorityLevel: "high" } } }),
-      });
-      if (!s.ok) throw new Error(`swap ${s.status}`);
-      const { swapTransaction } = await s.json();
-      const tx = VersionedTransaction.deserialize(Buffer.from(swapTransaction, "base64"));
-      const sig = await sendSigned(tx, kp);
-      buys.push({ sym: t.sym, mint: t.mint, lamports: share, out: String(q.outAmount), tx: sig });
+      const { sig, out } = await buyOne(t.mint, share, atas[i], kp);
+      buys.push({ sym: t.sym, mint: t.mint, lamports: share, out, tx: sig });
     } catch (e) {
       unspent += share;
       buys.push({ sym: t.sym, mint: t.mint, lamports: share, error: (e as Error).message.slice(0, 120) });
@@ -104,8 +144,7 @@ export async function payout(r: Round): Promise<Partial<Round>> {
   // 4. ce qui n'a pas pu être acheté est rendu en SOL : le joueur reçoit toujours sa valeur
   let refundTx: string | undefined;
   if (unspent > 0) {
-    const { blockhash } = await c.getLatestBlockhash("confirmed");
-    refundTx = await sendSigned(new Transaction({ feePayer: kp.publicKey, recentBlockhash: blockhash }).add(SystemProgram.transfer({ fromPubkey: kp.publicKey, toPubkey: player, lamports: unspent })), kp);
+    refundTx = await refundSol(kp, player, unspent);
   }
   return { buys, ataTx, refundTx, refunded: unspent || undefined, simulated: false };
 }

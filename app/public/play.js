@@ -87,6 +87,7 @@ function render() {
 
 function open() {
   if (window.__machine && window.__machine.busy()) return;
+  if (pendingRetry) { const p = pendingRetry; pendingRetry = null; window.__machine.play(deliver(p.id, p.signature)); return; }
   msg = ''; render(); back.classList.add('on');
   setTimeout(() => sheet.querySelector('.sh-ball[aria-pressed=true]')?.focus(), 50);
 }
@@ -137,18 +138,49 @@ async function pay() {
     return;
   }
   busy = false; back.classList.remove('on');
-  // le paiement est parti : la manivelle tourne tout de suite, la boule s'ouvre quand le serveur a fait le tirage
-  const result = api(`/api/round/${round.id}/paid`, { signature }).then((r) => {
-    if (r.status === 'failed') throw new Error(r.error || 'Something went wrong on our side.');
-    const sol = (x) => (Math.round(x * 1000) / 1000).toString();
-    return {
-      n: r.rarity, m: r.mult,
-      sub: r.simulated ? `Test mode: ${sol(r.value)} SOL of tokens, not bought for real.` : `${sol(r.value)} SOL in ${r.buys.filter((b) => b.tx).length} tokens sent to your wallet${r.refunded ? ` (+${sol(r.refunded)} SOL back)` : ''}.`,
-      link: r.simulated ? `/api/round/${r.id}` : `https://solscan.io/account/${account.address}#portfolio`,
-    };
-  });
-  window.__machine.play(result);
+  // le paiement est parti : l'adresse garde le numéro du tirage (recharger la page reprend ce tirage) `[F-122]`
+  const u = new URL(location.href); u.searchParams.set('r', round.id); history.replaceState(null, '', u);
+  // la manivelle tourne tout de suite, la boule s'ouvre quand le serveur a fait le tirage et livré les tokens
+  window.__machine.play(deliver(round.id, signature));
 }
+
+// ---------- livraison d'un tirage payé (premier envoi, reprise, ou nouvel essai après une panne)
+const GET = async (url) => { const r = await fetch(url, { cache: 'no-store' }); const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || 'Server error'); return j; };
+const sol = (x) => (Math.round(x * 10000) / 10000).toString();
+let pendingRetry = null;
+function toResult(r) {
+  if (r.status === 'failed') { pendingRetry = { id: r.id, signature: r.signature }; throw new Error(r.error || 'Delivery failed on our side. Your payment is safe: tap Try again to finish it.'); }
+  pendingRetry = null;
+  const got = (r.buys || []).filter((b) => b.tx).length;
+  return {
+    n: r.rarity, m: r.mult,
+    sub: r.simulated ? `Test mode: ${sol(r.value)} SOL of tokens, not bought for real.`
+      : got ? `${sol(r.value)} SOL in ${got} tokens sent to your wallet${r.refunded ? ` (+${sol(r.refunded)} SOL back)` : ''}.`
+      : `${sol(r.refunded || r.value)} SOL sent back to your wallet.`,
+    link: r.simulated ? `/api/round/${r.id}` : `https://solscan.io/account/${r.player}#portfolio`,
+  };
+}
+function deliver(id, signature) {
+  const work = api(`/api/round/${id}/paid`, { signature }).then(async (r) => {
+    // une autre livraison de ce tirage est en cours : on attend son résultat
+    for (let i = 0; i < 40 && (r.status === 'paid' || r.status === 'open'); i++) { await new Promise((ok) => setTimeout(ok, 3000)); r = await GET(`/api/round/${id}`); }
+    return r;
+  }).then(toResult);
+  const slow = new Promise((_, no) => setTimeout(() => { pendingRetry = { id, signature }; no(new Error('Still working on it. Your payment is safe: tap Try again in a minute.')); }, 150000));
+  return Promise.race([work, slow]);
+}
+// reprise : page ouverte avec ?r=<tirage> (après un rechargement, ou depuis un lien)
+async function resume(id) {
+  let r;
+  try { r = await GET(`/api/round/${id}`); } catch { return; }
+  if (r.status === 'open') return; // jamais payé : rien à reprendre
+  for (let i = 0; !window.__machine && i < 50; i++) await new Promise((ok) => setTimeout(ok, 200));
+  if (!window.__machine) return;
+  if (r.status === 'done') { window.__machine.play(Promise.resolve(toResult(r))); return; }
+  window.__machine.play(deliver(id, r.signature));
+}
+const RID = new URLSearchParams(location.search).get('r');
+if (RID) setTimeout(() => resume(RID), 1200);
 
 // ---------- les boutons d'achat de la page ouvrent la fenêtre
 window.__onTurn = open;
