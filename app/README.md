@@ -27,14 +27,18 @@ En local, `DEV_FAKE_PAYMENTS=true` permet de tester sans payer : une signature q
   - `RESERVE_SOL`, `HOURLY_PAYOUT_CAP_SOL`, `ATA_RENT` ;
   - `CRON_SECRET` (généré, jamais affiché) et `PAYOUT_SECRET`.
 
-## Mise en ligne (à faire par toi)
-1. **Base de données :** crée une base Redis gratuite sur upstash.com et note `UPSTASH_REDIS_REST_URL` et `UPSTASH_REDIS_REST_TOKEN`.
-2. **GitHub :** crée un dépôt **privé** vide nommé `Shiny` sur github.com/new (sans README). Je pousse le code dessus, puis je le relie à Vercel.
-3. **Vercel > shiny > Settings :**
-   - **Build > Root Directory** = `app` ;
-   - **Environment Variables :** ajoute `SOLANA_RPC_URL` et `JUPITER_API_KEY` (les mêmes que Vigil), ainsi que `UPSTASH_REDIS_REST_URL` et `UPSTASH_REDIS_REST_TOKEN`.
-4. **Financer le wallet de gains** `3FD4hsBHS7z4D2nmSmi7nMH1wdGQ2RbrT9EdK5dUCFUx` depuis Phantom. La machine refuse une boule tant que ce wallet ne peut pas payer son pire cas (x10) :
+## En ligne : https://shiny-topaz.vercel.app
+- GitHub `travisiol/shiny` (privé) → Vercel **shiny** (Root Directory `app`, Next.js). Chaque push sur `main` déploie.
+- Base de données : Upstash Redis **shiny-redis** (plan gratuit, iad1), créée via Vercel. Variables `KV_REST_API_*`.
+- Toutes les variables sont posées, y compris `SOLANA_RPC_URL` et `JUPITER_API_KEY` (les mêmes que Vigil).
+- Tâche de reversement (option B) : une fois par jour, car le plan Vercel gratuit n'autorise rien de plus fréquent.
+- Mode : **simulate** (aucun vrai achat).
+
+## Ce qui reste (à faire par toi)
+1. **Financer le wallet de gains** `3FD4hsBHS7z4D2nmSmi7nMH1wdGQ2RbrT9EdK5dUCFUx` depuis Phantom. En mode `live`, la machine refuse une boule tant que ce wallet ne peut pas payer son pire cas (x10) :
    - plus de 1,05 SOL pour ouvrir la Mini ;
    - plus de 5,05 SOL pour la Mega ;
    - plus de 10,05 SOL pour la Gold.
-5. Laisse `PAYOUT_MODE=simulate`, fais un vrai paiement d'une Mini pour vérifier le parcours, puis passe à `PAYOUT_MODE=live` et refais un essai.
+2. Faire un vrai paiement d'une Mini en mode `simulate` : le paiement est réel, les achats sont chiffrés mais pas faits.
+3. Passer `PAYOUT_MODE` à `live` dans Vercel, redéployer, puis refaire un essai avec une Mini.
+4. Cadre légal (voir TECHNIQUE.md §5).
