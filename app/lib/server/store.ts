@@ -7,8 +7,9 @@ import { IS_PROD } from "./config";
  * Stockage clé → valeur des tirages.
  * En ligne : Upstash Redis (REST). En local sans Upstash : fichiers JSON dans .data/.
  */
-const URL_ = process.env.UPSTASH_REDIS_REST_URL?.trim();
-const TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
+// noms posés par Upstash directement, ou par l'intégration Upstash de Vercel (KV_REST_API_*)
+const URL_ = (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL)?.trim();
+const TOKEN = (process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN)?.trim();
 export const HAS_DB = !!(URL_ && TOKEN);
 
 async function redis(cmd: (string | number)[]) {
