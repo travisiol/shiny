@@ -15,6 +15,11 @@ export const RESERVE_SOL = num("RESERVE_SOL", 80);
 export const HOURLY_CAP_SOL = num("HOURLY_PAYOUT_CAP_SOL", 60);
 export const ATA_RENT = env("ATA_RENT", "deduct") === "house" ? "house" : "deduct";
 export const CRON_SECRET = env("CRON_SECRET");
+/**
+ * Réserve exigée avant de vendre une boule, en multiples de son prix (10 = couvre un Jackpot x10).
+ * 0 = aucune vérification : toutes les boules sont vendues ; si un gain dépasse le solde, la livraison attend un rechargement `[F-128]`.
+ */
+export const COVER_MULT = num("COVER_MULT", 10);
 /** Faux paiements « SIM-… » : seulement en local, jamais en production. */
 export const FAKE_PAYMENTS = !IS_PROD && env("DEV_FAKE_PAYMENTS") === "true";
 

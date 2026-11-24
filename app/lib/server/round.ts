@@ -1,7 +1,7 @@
 import "server-only";
 import crypto from "node:crypto";
 import { LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction, TransactionInstruction, type ParsedInstruction, type PartiallyDecodedInstruction } from "@solana/web3.js";
-import { conn, FAKE_PAYMENTS, HOURLY_CAP_SOL, PAYOUT_MODE, payTo, payoutKeypair } from "./config";
+import { conn, COVER_MULT, FAKE_PAYMENTS, HOURLY_CAP_SOL, PAYOUT_MODE, payTo, payoutKeypair } from "./config";
 import * as db from "./store";
 import { BALLS, MULT, rarityFor, type Ball, type Rarity } from "./tables";
 import { payout, type Buy } from "./payout";
@@ -28,9 +28,9 @@ export class UserError extends Error {}
 /** Le service peut-il prendre un tirage de cette boule ? (réserve suffisante pour le pire cas x10, plafond horaire) */
 export async function canServe(ball: Ball): Promise<string | null> {
   const worst = BALLS[ball].lamports * MULT.Jackpot;
-  if (PAYOUT_MODE === "live") {
+  if (PAYOUT_MODE === "live" && COVER_MULT > 0) {
     const bal = await conn().getBalance(payoutKeypair().publicKey);
-    if (bal < worst + 0.05 * LAMPORTS_PER_SOL) return "The machine is being refilled. Try again in a few minutes.";
+    if (bal < BALLS[ball].lamports * COVER_MULT + 0.05 * LAMPORTS_PER_SOL) return "The machine is being refilled. Try again in a few minutes.";
   }
   const spent = (await db.get<number>(hourKey())) ?? 0;
   if (spent + worst / LAMPORTS_PER_SOL > HOURLY_CAP_SOL) return "The machine is cooling down. Try again in a few minutes.";
