@@ -124,8 +124,7 @@ export async function payout(r: Round, progress: Progress = () => {}): Promise<P
     }
   }
   // 2. la valeur à acheter (moins l'ouverture des comptes si ATA_RENT=deduct : ce SOL reste au joueur, il le récupère en fermant le compte)
-  // boule d'essai : la maison paie l'ouverture des comptes, sinon 0,01 SOL ne suffirait pas à acheter quoi que ce soit
-  const spend = Math.max(0, value - (ATA_RENT === "deduct" && r.ball !== "TEST" ? rent : 0));
+  const spend = Math.max(0, value - (ATA_RENT === "deduct" ? rent : 0));
   const share = Math.floor(spend / tokens.length);
   // part trop petite pour un achat sensé (< 0,0002 SOL par token) : tout est rendu en SOL, rien n'est acheté
   if (share < 200_000) {

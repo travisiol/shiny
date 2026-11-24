@@ -8,9 +8,6 @@ const BALLS = [
   { k: 'GOLD', price: '1 SOL', big: '1 in 20', col: '#FFC233' },
 ];
 const CHAIN = 'solana:mainnet';
-// boule d'essai privée : seulement avec le lien ?test=<clé> (le serveur vérifie la clé)
-const TEST_KEY = new URLSearchParams(location.search).get('test');
-if (TEST_KEY) BALLS.unshift({ k: 'TEST', price: '0.01 SOL', big: '1 in 50', col: '#4FB3FF' });
 
 // ---------- wallets (Wallet Standard)
 const wallets = [];
@@ -19,7 +16,7 @@ window.addEventListener('wallet-standard:register-wallet', (e) => { try { e.deta
 window.dispatchEvent(new CustomEvent('wallet-standard:app-ready', { detail: reg }));
 const usable = () => wallets.filter((w) => w.features && w.features['standard:connect'] && w.features['solana:signAndSendTransaction'] && (w.chains || []).some((c) => c.startsWith('solana:')));
 
-let wallet = null, account = null, ball = TEST_KEY ? 'TEST' : 'MINI', busy = false, msg = '';
+let wallet = null, account = null, ball = 'MINI', busy = false, msg = '';
 
 // ---------- base58 (signature de la transaction → texte)
 const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
@@ -127,7 +124,7 @@ async function pay() {
   busy = true; msg = ''; render();
   let round, signature;
   try {
-    round = await api('/api/round', { ball, player: account.address, testKey: TEST_KEY || undefined });
+    round = await api('/api/round', { ball, player: account.address });
     const bytes = Uint8Array.from(atob(round.transaction), (c) => c.charCodeAt(0));
     const [out] = await wallet.features['solana:signAndSendTransaction'].signAndSendTransaction({ account, chain: CHAIN, transaction: bytes });
     signature = b58(out.signature);
