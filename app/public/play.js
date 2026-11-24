@@ -174,7 +174,7 @@ const dlCss = `
 .dl-bar i{display:block;height:100%;width:0;border-right:3px solid var(--ink);background:repeating-linear-gradient(-45deg,#FFD23F 0 10px,#FFC233 10px 20px);background-size:28px 28px;animation:dlStripes .8s linear infinite;transition:width .5s ease-out}
 .dl.done .dl-bar i{background:#7CD992;animation:none;border-right:0}
 @keyframes dlStripes{to{background-position:28px 0}}
-.dl-toks{display:flex;justify-content:space-between;gap:6px}
+.dl-toks{display:flex;justify-content:space-around;gap:6px}
 .dl-t{position:relative;flex:0 0 auto;width:54px;height:54px;border:3px solid var(--ink);border-radius:50%;background:#fff;opacity:.4;filter:grayscale(1);transition:opacity .3s,filter .3s,transform .3s}
 .dl-t img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
 .dl-t.busy{opacity:.75;animation:dlBob 1s ease-in-out infinite}
@@ -197,12 +197,24 @@ dl.setAttribute('aria-live', 'polite');
 document.body.appendChild(dl);
 const TOK_IMG = Object.fromEntries((window.__TOKENS || []).map((t) => [t.sym, t.img]));
 let dlShown = 0, dlTarget = 0, dlCap = 0, dlTimer = 0;
+// le centre de chaque logo, en % de la barre : un logo passe au vert quand la barre l'atteint `[F-124]`
+function dlCenters() {
+  const bar = dl.querySelector('.dl-bar').getBoundingClientRect();
+  return [...dl.querySelectorAll('.dl-t')].map((el) => { const r = el.getBoundingClientRect(); return ((r.left + r.width / 2 - bar.left) / bar.width) * 100; });
+}
 function dlPaint() {
-  dlShown += Math.max(0, Math.min(dlCap, Math.max(dlTarget, dlShown + (dlCap - dlShown) * 0.025)) - dlShown);
+  dlShown += Math.max(0, Math.min(dlCap, Math.max(dlTarget, dlShown + (dlCap - dlShown) * 0.03)) - dlShown);
   dl.querySelector('.dl-bar i').style.width = dlShown.toFixed(1) + '%';
   dl.querySelector('.dl-pct').textContent = Math.round(dlShown) + '%';
+  const c = dlCenters();
+  dl.querySelectorAll('.dl-t').forEach((el, i) => {
+    if (!el.dataset.got || el.classList.contains('ok') || el.classList.contains('err') || dlShown < c[i] - 0.5) return;
+    el.classList.remove('busy');
+    if (el.dataset.got === 'err') { el.classList.add('err'); el.querySelector('em').textContent = '!'; }
+    else { el.classList.add('ok'); window.SFX && SFX.play('clink'); }
+  });
 }
-function dlSet(target, cap) { dlTarget = Math.max(dlTarget, target); dlCap = Math.max(dlTarget, cap); if (!dlTimer) dlTimer = setInterval(dlPaint, 150); dlPaint(); }
+function dlSet(target, cap) { dlTarget = Math.max(dlTarget, target); dlCap = Math.max(dlTarget, cap); if (!dlTimer) dlTimer = setInterval(dlPaint, 120); dlPaint(); }
 function dlOpen(syms) {
   dl.className = 'dl';
   dl.innerHTML = `<div class="dl-top"><b>Delivering your tokens</b><span><span class="dl-pct">0%</span><button class="dl-x" type="button" aria-label="Hide">✕</button></span></div>
@@ -211,31 +223,30 @@ function dlOpen(syms) {
     <p class="dl-msg">Finding your payment on Solana…</p>
     <div class="dl-act" hidden></div>`;
   dl.querySelector('.dl-x').onclick = () => dl.classList.remove('on');
-  dlShown = 0; dlTarget = 0; dlCap = 0; clearInterval(dlTimer); dlTimer = 0;
+  dlShown = 0; dlTarget = 0; dlCap = 0; clearInterval(dlTimer); dlTimer = 0; resolved = [];
   requestAnimationFrame(() => dl.classList.add('on'));
-  dlSet(6, 24);
+  dlSet(1, 4);
 }
 const dlMsg = (t) => { dl.querySelector('.dl-msg').textContent = t; };
-const okSeen = new Set();
+let resolved = []; // tokens arrivés (ou en échec), dans l'ordre d'arrivée
 function dlUpdate(r) {
   const buys = r.buys || [];
-  const ok = buys.filter((b) => b.tx).length;
-  dl.querySelectorAll('.dl-t').forEach((el) => {
+  buys.forEach((b) => { if ((b.tx || b.error) && !resolved.includes(b.sym)) resolved.push(b.sym); });
+  // les tokens arrivés glissent à gauche, dans l'ordre d'arrivée : la barre les atteint l'un après l'autre
+  const box = dl.querySelector('.dl-toks');
+  const els = [...box.querySelectorAll('.dl-t')];
+  [...resolved, ...els.map((e) => e.dataset.s).filter((s) => !resolved.includes(s))].forEach((sym) => { const el = els.find((e) => e.dataset.s === sym); if (el) box.appendChild(el); });
+  els.forEach((el) => {
     const b = buys.find((x) => x.sym === el.dataset.s);
+    if (b && (b.tx || b.error)) el.dataset.got = b.tx ? 'ok' : 'err';
     el.classList.toggle('busy', r.stage === 'buying' && !!b && !b.tx && !b.error);
-    el.classList.toggle('err', !!(b && b.error));
-    if (b && b.error) el.querySelector('em').textContent = '!';
-    if (b && b.tx && !el.classList.contains('ok')) {
-      el.classList.add('ok');
-      const key = r.id + b.sym;
-      if (!okSeen.has(key)) { okSeen.add(key); window.SFX && SFX.play('clink'); }
-    }
   });
-  if (r.status === 'open') { dlMsg('Finding your payment on Solana…'); dlSet(6, 24); return; }
+  const c = dlCenters(), n = resolved.length, first = c[0] - 4;
+  if (r.status === 'open') { dlMsg('Finding your payment on Solana…'); dlSet(1, 4); return; }
   if (r.status === 'paid') {
-    if (r.stage === 'buying') { dlMsg(`Buying your tokens… ${ok}/${buys.length || 5} in your wallet`); dlSet(42 + ok * 11, 42 + (ok + 1) * 11 - 2); }
-    else if (r.stage === 'refunding') { dlMsg('Sending the rest back to you in SOL…'); dlSet(90, 97); }
-    else { dlMsg('Payment confirmed. Opening your token accounts…'); dlSet(28, 40); }
+    if (r.stage === 'buying') { dlMsg(`Buying your tokens… ${buys.filter((b) => b.tx).length}/${buys.length || 5} in your wallet`); dlSet(n ? c[n - 1] : first, n < c.length ? c[n] - 3 : c[c.length - 1]); }
+    else if (r.stage === 'refunding') { dlMsg('Sending the rest back to you in SOL…'); dlSet(n ? c[n - 1] : first, 97); }
+    else { dlMsg('Payment confirmed. Opening your token accounts…'); dlSet(4, first); }
   }
 }
 function dlDone(r) {
