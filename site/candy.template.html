@@ -1,0 +1,1036 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shiny · Pop a capsule, five real memecoins inside</title>
+<meta name="description" content="Turn the crank, pop a capsule: five real Solana memecoins land in your wallet, bought the second it opens. Drop rates are public.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Poppins:wght@400;500;600;700;800&display=swap">
+<style>
+/* Shiny — DA cartoon `[F-104]` (réf. Frenly Pandas, Behance) : trait marine épais, aplats, bleu ciel / rose,
+   titres autocollants, décors (colline, barrière, nuages). Un seul univers : la machine et ses boules `[F-103]`. */
+:root{--sky:#8FD3F0;--sky2:#C6EBFA;--pink:#FFA4B2;--pink2:#FFD3DB;--ink:#0B2A3C;--cream:#FFF8EC;--sun:#FFD23F;--grass:#7ED27E;--grass2:#5BB862;--wood:#D18F52;--wood2:#A9672F;
+  --common:#FFFFFF;--rare:#4FB3FF;--epic:#C47DFF;--legend:#FFC233}
+*{box-sizing:border-box}
+html{background:var(--sky)}
+body{margin:0;background:var(--sky);color:var(--ink);font-family:Poppins,system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit}
+.wrap{max-width:1280px;margin:0 auto;padding:0 40px}
+/* titres autocollants : lettres claires, trait marine épais, ombre dure */
+.toon{font-family:'Luckiest Guy',system-ui;font-weight:400;letter-spacing:.02em;line-height:.95;color:#fff;-webkit-text-stroke:7px var(--ink);paint-order:stroke fill;text-shadow:0 7px 0 var(--ink)}
+.toon .y{color:var(--sun)}.toon .p{color:var(--pink)}
+.ch{display:inline-block;will-change:transform}
+.wd{display:inline-block;white-space:nowrap}
+.card{background:var(--cream);border:3.5px solid var(--ink);border-radius:26px;box-shadow:7px 8px 0 var(--ink)}
+.btn{display:inline-flex;align-items:center;gap:10px;height:58px;padding:0 28px;border-radius:16px;border:3.5px solid var(--ink);cursor:pointer;font:400 21px/1 'Luckiest Guy';letter-spacing:.03em;text-decoration:none;box-shadow:5px 6px 0 var(--ink);transition:transform .15s cubic-bezier(.3,1.6,.5,1),box-shadow .15s}
+.btn:hover{transform:translate(-2px,-3px) rotate(-1deg);box-shadow:7px 9px 0 var(--ink)}
+.btn:active{transform:translate(4px,5px);box-shadow:1px 1px 0 var(--ink)}
+.btn-main{background:var(--sun);color:var(--ink)}
+.btn-dark{background:var(--ink);color:#fff;box-shadow:5px 6px 0 #062030}
+.btn-light{background:var(--sky2);color:var(--ink)}
+.btn.sm{height:48px;padding:0 20px;font-size:18px;border-radius:14px}
+/* entête */
+header{position:fixed;inset:14px 24px auto 24px;z-index:40;display:flex;align-items:center;justify-content:space-between;padding:10px 12px 10px 20px;border:3.5px solid var(--ink);border-radius:20px;background:var(--sky2);box-shadow:5px 6px 0 var(--ink);transition:transform .3s}
+.logo{display:flex;align-items:center;gap:10px;font:400 30px/1 'Luckiest Guy';text-decoration:none;color:#fff;-webkit-text-stroke:5px var(--ink);paint-order:stroke fill;text-shadow:0 4px 0 var(--ink)}
+.logo svg{width:34px;height:34px}
+nav{display:flex;gap:28px;font-weight:600;font-size:15px}
+nav a{text-decoration:none;padding:6px 2px;border-bottom:3px solid transparent;transition:border-color .2s}nav a:hover{border-color:var(--ink)}
+/* héros : ciel, nuages, colline, barrière */
+.hero{position:relative;height:100vh;min-height:820px;overflow:hidden;background:linear-gradient(var(--sky) 0%,#A6DCF3 60%,var(--sky2) 100%)}
+.cloud{position:absolute;z-index:0;width:220px;height:auto;animation:drift linear infinite}
+@keyframes drift{from{transform:translateX(-30vw)}to{transform:translateX(130vw)}}
+.hill{position:absolute;z-index:1;left:-5%;right:-5%;bottom:0;height:30%}
+#machine{position:absolute;inset:0;width:100%;height:100%;z-index:2}
+.hero-top{position:absolute;z-index:3;left:0;right:0;top:104px;text-align:center;pointer-events:none}
+.hero h1{margin:0;font-size:clamp(64px,7.4vw,118px)}
+@media (max-width:480px){.hero h1{font-size:clamp(44px,14.5vw,62px)}}
+.hero p.lead{margin:16px auto 0;max-width:560px;font-size:18px;line-height:1.5;font-weight:500}
+.hero .ctas{pointer-events:auto}
+.ctas{display:flex;gap:16px;justify-content:center;margin-top:20px;flex-wrap:wrap}
+.side{position:absolute;z-index:3;width:250px;padding:20px 22px;transform:rotate(-4deg)}
+.side{transition:opacity .3s, transform .4s}
+.hero.playing .side{opacity:0;pointer-events:none}
+.side.l{left:max(40px,calc((100vw - 1280px)/2 + 40px));top:58%}
+.side.r{right:max(40px,calc((100vw - 1280px)/2 + 40px));top:54%;transform:rotate(4deg);background:var(--sun)}
+.side b{display:block;font:400 26px/1 'Luckiest Guy';letter-spacing:.02em}
+.side span{display:block;margin-top:6px;font-size:14px;font-weight:500;line-height:1.4}
+.clip{position:absolute;top:-16px;left:28px;width:16px;height:42px;border:3.5px solid var(--ink);border-radius:10px;background:var(--pink)}
+/* bulle du tirage de démo */
+.pull{position:absolute;z-index:5;left:0;top:0;padding:14px 18px 16px;text-align:center;transform:translate(-50%,0) scale(.4) rotate(-6deg);opacity:0;pointer-events:none;transition:opacity .25s,transform .5s cubic-bezier(.3,1.8,.5,1)}
+.pull.on{opacity:1;pointer-events:auto;transform:translate(-50%,0) scale(1) rotate(-3deg)}
+.pull h2{margin:0;font-size:52px;line-height:.9}
+.pull h2 .x{display:block;margin-top:4px;color:var(--rc);font-size:40px}
+.pull .btn{margin-top:12px}
+.pull .psub{margin:8px 0 0;font:600 14px/1.35 Poppins;max-width:240px}
+[hidden]{display:none!important}
+.pull .plink{display:block;margin-top:6px;font:700 14px Poppins;color:var(--ink)}
+.pull.err h2 .x{font:600 15px/1.35 Poppins;max-width:250px;margin-top:8px;color:var(--ink);-webkit-text-stroke:0;text-shadow:none}
+/* bandeau défilant */
+.band{position:relative;z-index:6;background:var(--ink);padding:14px 0;overflow:hidden;border-top:3.5px solid var(--ink);border-bottom:3.5px solid var(--ink)}
+.band .row{display:flex;gap:34px;white-space:nowrap;width:max-content;font:400 34px/1 'Luckiest Guy';letter-spacing:.03em;color:#fff;animation:marq 30s linear infinite}
+.band .row span{display:inline-flex;align-items:center;gap:34px}
+.band .row svg{width:30px;height:30px}
+@keyframes marq{to{transform:translateX(-50%)}}
+/* sections */
+section{position:relative;padding:120px 0;overflow:hidden}
+.pinkbg{background:var(--pink)}.skybg{background:var(--sky)}
+.head{text-align:center}
+section h2.toon{margin:0;font-size:clamp(52px,6.4vw,96px)}
+.sign{display:inline-block;margin-top:22px;padding:10px 22px;border:3.5px solid var(--ink);border-radius:12px;background:linear-gradient(var(--wood),var(--wood2));color:#fff;font-weight:700;font-size:15px;box-shadow:4px 5px 0 var(--ink);transform:rotate(-1.5deg)}
+.sub{margin:18px auto 0;max-width:600px;font-size:18px;line-height:1.55;font-weight:500}
+/* les boules */
+#capsules .stage{position:relative;height:430px;margin-top:20px}
+#capsules canvas{width:100%;height:100%;display:block}
+.tiers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:30px;margin-top:-70px;position:relative;z-index:2}
+.tier{position:relative;padding:30px 26px 26px;text-align:center;transition:transform .25s cubic-bezier(.3,1.6,.5,1)}
+.tier:nth-child(2){transform:translateY(-14px)}
+.tier:hover{transform:translateY(-10px) rotate(-1.2deg)}
+.tier h3{margin:0;font-size:46px}
+.tier .price{display:inline-block;margin-top:12px;padding:6px 16px;border:3px solid var(--ink);border-radius:12px;background:var(--tc);font:800 24px/1 Poppins}
+.tier .ev{margin-top:14px;font-weight:700;font-size:15px}
+.tier p{margin:8px 0 20px;font-size:15px;line-height:1.5}
+.spark{position:absolute;width:26px;height:26px;right:22px;top:20px}
+/* taux de drop */
+.rates{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:30px;margin-top:60px}
+.rate{padding:26px}
+.rate h3{margin:0 0 16px;font-size:34px;text-align:center}
+.rrow{display:grid;grid-template-columns:104px 1fr 56px 56px;align-items:center;gap:10px;padding:8px 0;font-weight:700;font-size:14px}
+.rrow .nm{display:flex;align-items:center;gap:8px}
+.rrow .nm i{width:18px;height:18px;border-radius:50%;background:var(--c);border:2.5px solid var(--ink)}
+.bar{height:16px;border:2.5px solid var(--ink);border-radius:999px;background:#fff;overflow:hidden}
+.bar b{display:block;height:100%;width:0;background:var(--c);border-right:2.5px solid var(--ink);transition:width 1.1s cubic-bezier(.2,.9,.2,1)}
+.rate.in .bar b{width:var(--w)}
+.rrow .pc,.rrow .mx{text-align:right}
+.rate .tot{display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:16px;border-top:3px dashed var(--ink);font-weight:800}
+.rate .tot b{padding:4px 12px;border:3px solid var(--ink);border-radius:10px;background:var(--grass)}
+.rate .tot b.big{background:var(--legend)}
+.rate .tot2{margin-top:10px;padding-top:0;border-top:0}
+.ratenote{max-width:820px;margin:34px auto 0;text-align:center;font-size:16px;line-height:1.6;font-weight:500}
+/* comment ça marche */
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:30px;margin-top:60px}
+.step{padding:28px;transition:transform .25s cubic-bezier(.3,1.6,.5,1)}
+.step:nth-child(1){background:var(--sun)}.step:nth-child(2){background:var(--sky2)}.step:nth-child(3){background:var(--pink2)}
+.step:hover{transform:rotate(-1.5deg) translateY(-8px)}
+.step .n{display:inline-grid;place-items:center;width:64px;height:64px;border:3.5px solid var(--ink);border-radius:50%;background:#fff;font:400 34px/1 'Luckiest Guy';box-shadow:4px 4px 0 var(--ink)}
+.step h3{margin:16px 0 0;font:400 30px/1 'Luckiest Guy';letter-spacing:.02em}
+.step p{margin:10px 0 0;font-size:16px;line-height:1.5;font-weight:500}
+
+/* vidéo explicative en motion design (maison, dans la DA, sans musique) `[F-105]` */
+.vid{max-width:1100px;margin:50px auto 0;padding:12px;background:var(--ink)}
+.vid-box{position:relative;width:100%;aspect-ratio:1080/608;overflow:hidden;border-radius:18px;background:linear-gradient(#8FD3F0,#C6EBFA)}
+.vid-stage{position:absolute;left:0;top:0;width:1080px;height:608px;transform-origin:0 0}
+.vid-stage > *{position:absolute}
+.v-hill{left:-10px;right:-10px;bottom:-6px;width:1100px;height:150px}
+.v-cloud{opacity:.95}
+.v-cap{left:0;top:30px;width:1080px;text-align:center}
+.v-cap h3{margin:0;font-size:60px}
+.v-cap p{margin:8px 0 0;font-size:21px;font-weight:600;color:var(--ink)}
+.v-machine{left:110px;top:170px;width:260px;height:420px;overflow:visible}
+.v-move{left:0;top:0;will-change:transform}
+.v-ball{width:var(--sz);height:var(--sz);text-align:center}
+.v-ball svg{width:100%;height:100%;display:block}
+.v-ball b{display:block;margin-top:6px;font:400 22px/1 'Luckiest Guy';letter-spacing:.03em}
+.v-hand{width:44px;height:52px}
+.v-wallet{width:200px;text-align:center}
+.v-wallet svg{width:200px;height:150px;display:block}
+.v-wallet b{display:block;margin-top:2px;font:400 22px/1 'Luckiest Guy';color:#fff;-webkit-text-stroke:5px var(--ink);paint-order:stroke fill}
+.v-sol{width:64px;height:64px;border-radius:50%;border:4px solid var(--ink);background:linear-gradient(135deg,#9945FF,#14F195);display:grid;place-items:center;font:400 20px/1 'Luckiest Guy';color:#fff;-webkit-text-stroke:3px var(--ink);paint-order:stroke fill;box-shadow:3px 4px 0 var(--ink)}
+.v-pill{display:flex;align-items:center;gap:10px;padding:12px 18px;border:3.5px solid var(--ink);border-radius:16px;background:var(--cream);box-shadow:4px 5px 0 var(--ink);font:700 19px/1 Poppins;white-space:nowrap}
+.v-pill svg{width:26px;height:26px}
+.v-pill code{font:700 17px/1 Poppins;padding:5px 8px;border-radius:8px;background:var(--sky2)}
+.v-q{width:96px;height:96px;border-radius:50%;border:4px solid var(--ink);background:var(--sun);display:grid;place-items:center;font:400 60px/1 'Luckiest Guy';box-shadow:4px 5px 0 var(--ink)}
+.v-capsule{width:92px;height:92px;overflow:visible}
+.v-star{width:36px;height:36px}
+/* les jetons sont posés hors du flux : sinon chacun garde un décalage de 64 px et deux se superposent `[F-112]` */
+#vCoins{position:absolute;left:0;top:0;width:0;height:0}
+.v-coin{position:absolute;width:64px;height:64px;border-radius:50%;border:4px solid var(--ink);background:var(--cream);display:grid;place-items:center;box-shadow:3px 4px 0 var(--ink)}
+.v-coin img{width:48px;height:48px;border-radius:50%;object-fit:cover}
+.v-result small{display:block;margin-top:6px;font:700 16px/1 Poppins;color:var(--ink);-webkit-text-stroke:0}
+.v-result{text-align:center;padding:12px 20px;border:3.5px solid var(--ink);border-radius:18px;background:var(--cream);box-shadow:5px 6px 0 var(--ink);font:400 40px/1 'Luckiest Guy';color:#C47DFF;-webkit-text-stroke:5px var(--ink);paint-order:stroke fill;white-space:nowrap}
+.v-wcoins{display:flex;gap:6px}
+.v-wcoins img{width:34px;height:34px;border-radius:50%;border:3px solid var(--ink);object-fit:cover;background:var(--cream)}
+.v-btns{display:flex;gap:12px}
+.v-btns span{padding:12px 20px;border:3.5px solid var(--ink);border-radius:14px;background:var(--sun);box-shadow:4px 5px 0 var(--ink);font:400 22px/1 'Luckiest Guy';letter-spacing:.03em}
+.v-btns span.dk{background:var(--ink);color:#fff}
+.vid-ui{display:flex;align-items:center;gap:14px;padding:14px 6px 4px}
+.v-play{flex:none;width:46px;height:46px;border-radius:12px;border:3px solid #fff;background:transparent;color:#fff;cursor:pointer;display:grid;place-items:center}
+.v-play svg{width:20px;height:20px}
+.v-chap{display:flex;gap:8px;flex-wrap:wrap}
+.v-chap button{border:2.5px solid rgba(255,255,255,.35);background:transparent;color:#fff;border-radius:999px;padding:7px 14px;font:600 14px/1 Poppins;cursor:pointer}
+.v-chap button.on{background:var(--sun);color:var(--ink);border-color:var(--sun)}
+.v-prog{flex:1;height:10px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden}
+.v-prog b{display:block;height:100%;width:0;background:var(--sun)}
+/* bouton son `[F-113]` */
+.hdr-r{display:flex;align-items:center;gap:12px}
+.snd{height:44px;display:flex;align-items:center;gap:8px;padding:0 14px 0 11px;border:3px solid var(--ink);border-radius:999px;background:var(--sun);color:var(--ink);box-shadow:3px 4px 0 var(--ink);cursor:pointer;font:400 16px/1 'Luckiest Guy';letter-spacing:.02em;padding-top:2px;transition:transform .15s,background .2s}
+.snd:hover{transform:translateY(-2px) rotate(-3deg)}
+.snd:active{transform:translateY(2px);box-shadow:1px 2px 0 var(--ink)}
+.snd .note{width:22px;height:22px;margin-top:-2px}
+.snd .x{display:none}
+.snd .eq{display:flex;align-items:flex-end;gap:2px;height:14px;margin-top:-2px}
+.snd .eq i{width:3px;height:100%;border-radius:2px;background:var(--ink);transform-origin:bottom;animation:eq .9s ease-in-out infinite}
+.snd .eq i:nth-child(2){animation-delay:-.3s}.snd .eq i:nth-child(3){animation-delay:-.6s}
+@keyframes eq{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}
+.snd[aria-pressed=false]{background:var(--cream)}
+.snd[aria-pressed=false] .x{display:block}
+.snd[aria-pressed=false] .eq{display:none}
+@media (max-width:480px){.hdr-r{gap:8px}.hdr-r .btn{white-space:nowrap;padding-left:12px;padding-right:12px;font-size:13px}header .logo{font-size:24px}header .logo svg{width:26px;height:26px}}
+@media (max-width:900px){.snd .lbl{display:none}.snd{padding:0 11px}}
+/* fin */
+.final{text-align:center;padding:150px 0 120px;background:linear-gradient(var(--sky),var(--sky2))}
+.final h2.toon{font-size:clamp(90px,14vw,230px)}
+footer{background:var(--ink);color:#d7eef8;padding:46px 0 60px;font-size:14px}
+footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+footer .logo{font-size:36px}
+.fade{opacity:0;transform:translateY(30px)}
+@media (max-width:900px){
+  nav,.side{display:none}.wrap{padding:0 22px}
+  header{inset:10px 10px auto 10px}
+  .hero-top{top:100px}
+  .tiers,.rates,.steps{grid-template-columns:1fr}
+  .tier:nth-child(2){transform:none}
+  #capsules .stage{height:300px}
+}
+@media (prefers-reduced-motion:reduce){.cloud,.band .row{animation:none}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="star" viewBox="-12 -12 24 24"><path d="M0 -10 L2.6 -2.6 L10 0 L2.6 2.6 L0 10 L-2.6 2.6 L-10 0 L-2.6 -2.6 Z" fill="#FFD23F" stroke="#0B2A3C" stroke-width="2.2" stroke-linejoin="round"/></symbol>
+    <symbol id="cloud" viewBox="0 0 220 110"><path d="M38 92 C10 92 6 58 30 52 C26 26 58 14 76 30 C86 8 128 6 138 32 C156 18 190 28 186 56 C210 58 212 92 186 92 Z" fill="#fff" stroke="#0B2A3C" stroke-width="5" stroke-linejoin="round"/></symbol>
+    <symbol id="ball" viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="#fff" stroke="#0B2A3C" stroke-width="3.5"/><path d="M3 20 A17 17 0 0 1 37 20 Z" fill="#FFA4B2" stroke="#0B2A3C" stroke-width="3.5" stroke-linejoin="round"/><path d="M10 13 Q14 8 19 8" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<header id="hdr">
+  <a class="logo" href="#top"><svg aria-hidden="true"><use href="#ball"/></svg>shiny</a>
+  <nav><a href="#capsules">Capsules</a><a href="#rates">Drop rates</a><a href="#how">How it works</a></nav>
+  <div class="hdr-r">
+    <button class="snd" id="sndBtn" type="button" aria-label="Mute music and sounds" aria-pressed="true" title="Music and sounds"><svg class="note" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17.5V6l10-2.5v11.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><circle cx="6.5" cy="17.5" r="3" fill="currentColor"/><circle cx="16.5" cy="15" r="3" fill="currentColor"/><path class="x" d="M3 3l18 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg><span class="lbl">Music</span><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span></button>
+    <a class="btn btn-dark sm" href="#capsules">Get a capsule</a>
+  </div>
+</header>
+
+<div class="hero" id="top">
+  <svg class="cloud" style="top:16%;width:240px;animation-duration:70s;animation-delay:-20s" aria-hidden="true"><use href="#cloud"/></svg>
+  <svg class="cloud" style="top:34%;width:170px;animation-duration:92s;animation-delay:-60s" aria-hidden="true"><use href="#cloud"/></svg>
+  <svg class="cloud" style="top:9%;width:130px;animation-duration:110s;animation-delay:-5s" aria-hidden="true"><use href="#cloud"/></svg>
+  <svg class="cloud" style="top:44%;width:210px;animation-duration:84s;animation-delay:-38s" aria-hidden="true"><use href="#cloud"/></svg>
+  <svg class="hill" viewBox="0 0 1600 300" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0 120 C300 40 520 30 800 70 C1080 110 1300 40 1600 90 L1600 300 L0 300 Z" fill="#7ED27E" stroke="#0B2A3C" stroke-width="5"/>
+    <path d="M0 170 C320 110 560 120 820 150 C1100 182 1320 130 1600 160 L1600 300 L0 300 Z" fill="#5BB862"/>
+    <g fill="#D18F52" stroke="#0B2A3C" stroke-width="4" stroke-linejoin="round">
+      <path d="M0 196 L1600 196 L1600 214 L0 214 Z"/>
+      <path d="M0 236 L1600 236 L1600 254 L0 254 Z"/>
+    </g>
+  </svg>
+  <canvas id="machine" aria-label="A cartoon gachapon machine with a face and the price 0.1 SOL on its screen"></canvas>
+  <div class="hero-top">
+    <h1 class="toon split">Pop a <span class="y">capsule!</span></h1>
+    <p class="lead">Five real Solana memecoins inside, bought the second it pops. Turn the crank and pray for gold.</p>
+    <div class="ctas">
+      <button class="btn btn-main" id="turnBtn" type="button">Turn the crank</button>
+      <a class="btn btn-light" href="#rates">Drop rates</a>
+    </div>
+  </div>
+  <div class="side l card"><div class="clip"></div><b>0.1 SOL</b><span>a turn. Five tokens in every ball, no empty capsules.</span></div>
+  <div class="side r card"><div class="clip" style="background:var(--sky2)"></div><b>Jackpot x10</b><span>The rarest ball in the machine. Ten times your SOL in real tokens.</span></div>
+  <div class="pull card" id="pull" aria-live="polite">
+    <h2 class="toon"><span id="pullName">Epic!</span><span class="x" id="pullX">x1.8</span></h2>
+    <p class="psub" id="pullSub" hidden></p>
+    <a class="plink" id="pullLink" target="_blank" rel="noopener" hidden>See your tokens ↗</a>
+    <button class="btn btn-main sm" id="againBtn" type="button">Turn again</button>
+  </div>
+</div>
+
+<div class="band" aria-hidden="true"><div class="row">
+  <span>POP A CAPSULE <svg><use href="#star"/></svg> 5 REAL TOKENS <svg><use href="#star"/></svg> PUBLIC DROP RATES <svg><use href="#star"/></svg> BONK · WIF · PENGU · POPCAT · FARTCOIN <svg><use href="#star"/></svg></span>
+  <span>POP A CAPSULE <svg><use href="#star"/></svg> 5 REAL TOKENS <svg><use href="#star"/></svg> PUBLIC DROP RATES <svg><use href="#star"/></svg> BONK · WIF · PENGU · POPCAT · FARTCOIN <svg><use href="#star"/></svg></span>
+</div></div>
+
+<section id="capsules" class="pinkbg">
+  <svg class="cloud" style="top:60px;width:180px;animation-duration:120s;animation-delay:-30s;opacity:.9" aria-hidden="true"><use href="#cloud"/></svg>
+  <div class="wrap">
+    <div class="head fade"><h2 class="toon split">Pick your <span class="y">ball</span></h2><div class="sign">Three sizes, one crank</div><p class="sub">The bigger the ball, the more often it hits x5 and up.</p></div>
+    <div class="stage"><canvas id="capCanvas" aria-label="Three capsules: Mini, Mega and Gold"></canvas></div>
+    <div class="tiers">
+      <article class="tier card fade" style="--tc:#fff"><div class="clip"></div><svg class="spark"><use href="#star"/></svg><h3 class="toon">Mini</h3><div class="price">0.1 SOL</div><div class="ev">x5 or better: 1 in 50</div><p>Five tokens a turn. The cheap way to chase a runner.</p><a class="btn btn-light sm" href="#rates">See odds</a></article>
+      <article class="tier card fade" style="--tc:var(--pink)"><div class="clip" style="background:var(--sun)"></div><svg class="spark"><use href="#star"/></svg><h3 class="toon">Mega</h3><div class="price">0.5 SOL</div><div class="ev">x5 or better: 1 in 29</div><p>Almost twice the Legendary odds of a Mini. The crowd favourite.</p><a class="btn btn-main sm" href="#rates">See odds</a></article>
+      <article class="tier card fade" style="--tc:var(--legend)"><div class="clip" style="background:var(--sky2)"></div><svg class="spark"><use href="#star"/></svg><h3 class="toon">Gold</h3><div class="price">1 SOL</div><div class="ev">x5 or better: 1 in 20</div><p>Four times the Jackpot odds of a Mini, and the best average return.</p><a class="btn btn-light sm" href="#rates">See odds</a></article>
+    </div>
+  </div>
+</section>
+
+<div class="band" aria-hidden="true"><div class="row" style="animation-direction:reverse">
+  <span>NO EMPTY BALLS <svg><use href="#star"/></svg> PROVABLY FAIR <svg><use href="#star"/></svg> CLEAN LAUNCHES ONLY <svg><use href="#star"/></svg> JACKPOT X10 <svg><use href="#star"/></svg></span>
+  <span>NO EMPTY BALLS <svg><use href="#star"/></svg> PROVABLY FAIR <svg><use href="#star"/></svg> CLEAN LAUNCHES ONLY <svg><use href="#star"/></svg> JACKPOT X10 <svg><use href="#star"/></svg></span>
+</div></div>
+
+<section id="rates" class="skybg">
+  <div class="wrap">
+    <div class="head fade"><h2 class="toon split">No secret <span class="p">odds</span></h2><div class="sign">Published before you pay</div><p class="sub">Every ball has its own table. The multiplier is what your five tokens are worth when it pops.</p></div>
+    <div class="rates" id="rateGrid"></div>
+    <p class="ratenote fade">Every ball has the same five prizes: Common x0.5, Rare x1 (your SOL back), Epic x1.8, Legendary x5 and Jackpot x10. Bigger balls trade small wins for big ones: more Legendary and Jackpot, more Commons. A Common still returns half the price in real tokens: there are no empty balls.</p>
+  </div>
+</section>
+
+<section id="how" class="pinkbg">
+  <div class="wrap">
+    <div class="head fade"><h2 class="toon split">How it <span class="y">works</span></h2><div class="sign">16 seconds, no sign-up</div></div>
+    <div class="vid card fade" id="vid">
+      <div class="vid-box" id="vidBox"><div class="vid-stage" id="stage">
+        <svg class="v-cloud" style="left:40px;top:120px;width:150px;height:76px" aria-hidden="true"><use href="#cloud"/></svg>
+        <svg class="v-cloud" style="left:880px;top:150px;width:130px;height:66px" aria-hidden="true"><use href="#cloud"/></svg>
+        <svg class="v-hill" viewBox="0 0 1100 150" preserveAspectRatio="none" aria-hidden="true"><path d="M0 50 C260 6 520 16 760 40 C900 54 1010 30 1100 40 L1100 150 L0 150 Z" fill="#7ED27E" stroke="#0B2A3C" stroke-width="5"/><path d="M0 92 C300 62 600 70 1100 86 L1100 150 L0 150 Z" fill="#5BB862"/></svg>
+        <div class="v-cap" id="vCap"><h3 class="toon" id="vTitle">Pick a ball</h3><p id="vSub">Mini, Mega or Gold</p></div>
+        <svg id="vMachine" class="v-machine" viewBox="0 0 260 420" aria-hidden="true">
+          <circle cx="130" cy="120" r="104" fill="#DFF4FF" stroke="#0B2A3C" stroke-width="6"/>
+          <g id="vDome"></g>
+          <path d="M66 66 Q86 40 112 34" stroke="#fff" stroke-width="8" fill="none" stroke-linecap="round"/>
+          <rect x="112" y="8" width="36" height="20" rx="8" fill="#FFA4B2" stroke="#0B2A3C" stroke-width="5"/>
+          <circle cx="130" cy="2" r="9" fill="#FFD23F" stroke="#0B2A3C" stroke-width="4"/>
+          <rect x="62" y="214" width="136" height="26" rx="9" fill="#FFA4B2" stroke="#0B2A3C" stroke-width="5"/>
+          <rect x="28" y="236" width="204" height="158" rx="36" fill="#FFD23F" stroke="#0B2A3C" stroke-width="6"/>
+          <circle cx="84" cy="272" r="17" fill="#fff" stroke="#0B2A3C" stroke-width="4"/><circle id="vP1" cx="86" cy="273" r="8" fill="#0B2A3C"/>
+          <circle cx="132" cy="272" r="17" fill="#fff" stroke="#0B2A3C" stroke-width="4"/><circle id="vP2" cx="134" cy="273" r="8" fill="#0B2A3C"/>
+          <ellipse cx="58" cy="294" rx="10" ry="6" fill="#FF8FA3"/><ellipse cx="160" cy="294" rx="10" ry="6" fill="#FF8FA3"/>
+          <rect x="44" y="304" width="128" height="50" rx="10" fill="#0B2A3C"/>
+          <text id="vPrice" x="108" y="338" text-anchor="middle" font-family="Luckiest Guy" font-size="26" fill="#FFD23F">0.1 SOL</text>
+          <rect id="vSlot" x="186" y="258" width="30" height="16" rx="6" fill="#FFA4B2" stroke="#0B2A3C" stroke-width="4"/>
+          <g id="vCrank"><circle cx="201" cy="326" r="19" fill="#D8E2EA" stroke="#0B2A3C" stroke-width="4"/><rect x="197" y="302" width="8" height="26" rx="4" fill="#D8E2EA" stroke="#0B2A3C" stroke-width="3"/><circle cx="201" cy="302" r="7" fill="#C6EBFA" stroke="#0B2A3C" stroke-width="3"/></g>
+          <rect x="74" y="362" width="72" height="24" rx="8" fill="#0B2A3C"/>
+          <rect x="16" y="392" width="228" height="24" rx="10" fill="#FFA4B2" stroke="#0B2A3C" stroke-width="5"/>
+        </svg>
+        <div class="v-move v-ball" data-k="mini" style="--sz:82px"><svg viewBox="-45 -45 90 90"><path d="M-40 0 A40 40 0 0 0 40 0 Z" fill="#fff" stroke="#0B2A3C" stroke-width="5"/><path d="M-40 0 A40 40 0 0 1 40 0 Z" fill="#fff" stroke="#0B2A3C" stroke-width="5"/></svg><b>Mini</b></div>
+        <div class="v-move v-ball" data-k="mega" style="--sz:104px"><svg viewBox="-45 -45 90 90"><path d="M-40 0 A40 40 0 0 0 40 0 Z" fill="#fff" stroke="#0B2A3C" stroke-width="5"/><path d="M-40 0 A40 40 0 0 1 40 0 Z" fill="#FFA4B2" stroke="#0B2A3C" stroke-width="5"/></svg><b>Mega</b></div>
+        <div class="v-move v-ball" data-k="gold" style="--sz:126px"><svg viewBox="-45 -45 90 90"><path d="M-40 0 A40 40 0 0 0 40 0 Z" fill="#fff" stroke="#0B2A3C" stroke-width="5"/><path d="M-40 0 A40 40 0 0 1 40 0 Z" fill="#FFC233" stroke="#0B2A3C" stroke-width="5"/></svg><b>Gold</b></div>
+        <svg id="vHand" class="v-move v-hand" viewBox="0 0 40 48" aria-hidden="true"><path d="M8 2 L8 34 L16 27 L22 42 L28 39 L22 25 L32 25 Z" fill="#fff" stroke="#0B2A3C" stroke-width="3.5" stroke-linejoin="round"/></svg>
+        <div id="vWallet" class="v-move v-wallet"><div class="v-wcoins" id="vWCoins"></div><svg viewBox="0 0 200 150" aria-hidden="true"><rect x="8" y="22" width="184" height="120" rx="26" fill="#0B2A3C" stroke="#0B2A3C" stroke-width="5"/><path d="M8 52 L192 52" stroke="#1E4A64" stroke-width="6"/><rect x="118" y="66" width="74" height="44" rx="14" fill="#FFA4B2" stroke="#0B2A3C" stroke-width="5"/><circle cx="146" cy="88" r="9" fill="#FFD23F" stroke="#0B2A3C" stroke-width="4"/></svg><b>Your wallet</b></div>
+        <div id="vSol" class="v-move v-sol">SOL</div>
+        <div id="vLock" class="v-move v-pill"><svg viewBox="0 0 26 26" aria-hidden="true"><rect x="4" y="11" width="18" height="13" rx="3" fill="#FFD23F" stroke="#0B2A3C" stroke-width="2.5"/><path d="M8 11 V8 a5 5 0 0 1 10 0 V11" fill="none" stroke="#0B2A3C" stroke-width="2.5"/></svg>Seed locked <code>a7f3…c91e</code></div>
+        <div id="vSig" class="v-move v-pill"><svg viewBox="0 0 26 26" aria-hidden="true"><path d="M3 20 C8 6 12 22 16 10 C18 6 20 14 23 12" fill="none" stroke="#0B2A3C" stroke-width="3" stroke-linecap="round"/></svg>+ your signature</div>
+        <div id="vQ" class="v-move v-q">?</div>
+        <svg id="vCapsule" class="v-move v-capsule" viewBox="-46 -46 92 92" aria-hidden="true">
+          <g id="vCapBot"><path d="M-40 0 A40 40 0 0 0 40 0 Z" fill="#fff" stroke="#0B2A3C" stroke-width="5" stroke-linejoin="round"/></g>
+          <g id="vCapTop"><path d="M-40 0 A40 40 0 0 1 40 0 Z" fill="#C47DFF" stroke="#0B2A3C" stroke-width="5" stroke-linejoin="round"/><path d="M0 -30 L4 -18 L16 -14 L4 -10 L0 2 L-4 -10 L-16 -14 L-4 -18 Z" fill="#fff" stroke="#0B2A3C" stroke-width="2.5" stroke-linejoin="round"/></g>
+        </svg>
+        <div id="vStars"></div>
+        <div id="vResult" class="v-move v-result">Epic! x1.8<small>0.9 SOL in tokens</small></div>
+        <div id="vCoins"></div>
+        <div id="vBtns" class="v-move v-btns"><span>Hold</span><span class="dk">Sell all</span></div>
+      </div></div>
+      <div class="vid-ui">
+        <button class="v-play" id="vPlay" type="button" aria-label="Pause"><svg viewBox="0 0 20 20" id="vPlayIco"><rect x="4" y="3" width="4" height="14" rx="1.5" fill="currentColor"/><rect x="12" y="3" width="4" height="14" rx="1.5" fill="currentColor"/></svg></button>
+        <div class="v-chap" id="vChap"><button type="button" data-l="pick">Pick</button><button type="button" data-l="pay">Pay</button><button type="button" data-l="draw">Draw</button><button type="button" data-l="pop">Pop</button><button type="button" data-l="hold">Hold</button></div>
+        <div class="v-prog"><b id="vProg"></b></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="final">
+  <svg class="cloud" style="top:80px;width:220px;animation-duration:80s;animation-delay:-10s" aria-hidden="true"><use href="#cloud"/></svg>
+  <svg class="cloud" style="top:260px;width:160px;animation-duration:100s;animation-delay:-55s" aria-hidden="true"><use href="#cloud"/></svg>
+  <div class="wrap fade"><h2 class="toon split">Turn <span class="y">it!</span></h2><div class="ctas"><a class="btn btn-main" href="#top">Turn the crank</a></div></div>
+</section>
+
+<footer><div class="wrap"><a class="logo" href="#top"><svg aria-hidden="true"><use href="#ball"/></svg>shiny</a><span>Working name · design study. Memecoins are volatile: a capsule can be worth less than you paid. Odds are public. Not financial advice.</span></div></footer>
+
+<script>
+window.__TOKENS = __TOKENS__;
+/* taux de drop (ECONOMIE.md) : [rareté, probabilité, multiplicateur] */
+window.__RATES = {
+  MINI: { price: '0.1 SOL', ev: '90%', big: 50, rows: [['Common', .55, .5], ['Rare', .33, 1], ['Epic', .10, 1.8], ['Legendary', .017, 5], ['Jackpot', .003, 10]] },
+  MEGA: { price: '0.5 SOL', ev: '92%', big: 29, rows: [['Common', .664, .5], ['Rare', .211, 1], ['Epic', .09, 1.8], ['Legendary', .027, 5], ['Jackpot', .008, 10]] },
+  GOLD: { price: '1 SOL', ev: '93.5%', big: 20, rows: [['Common', .762, .5], ['Rare', .118, 1], ['Epic', .07, 1.8], ['Legendary', .038, 5], ['Jackpot', .012, 10]] }
+};
+window.__RCOL = { Common: '#FFFFFF', Rare: '#4FB3FF', Epic: '#C47DFF', Legendary: '#FFC233', Jackpot: '#FF7AB6' };
+</script>
+
+<script>
+/* titres qui rebondissent, défilement fluide, apparitions */
+document.querySelectorAll('.split').forEach((el) => {
+  const walk = (node) => [...node.childNodes].forEach((n) => {
+    if (n.nodeType === 3) {
+      const frag = document.createDocumentFragment();
+      // lettre par lettre, mais chaque mot reste d'un seul tenant (sinon « CAPS / ULE » sur mobile)
+      n.textContent.split(/(\s+)/).forEach((w) => {
+        if (!w) return;
+        if (/^\s+$/.test(w)) { frag.appendChild(document.createTextNode(' ')); return; }
+        const word = document.createElement('span'); word.className = 'wd';
+        [...w].forEach((c) => { const s = document.createElement('span'); s.className = 'ch'; s.textContent = c; word.appendChild(s); });
+        frag.appendChild(word);
+      });
+      n.replaceWith(frag);
+    } else if (n.nodeType === 1) walk(n);
+  });
+  walk(el);
+});
+const grid = document.getElementById('rateGrid');
+Object.entries(window.__RATES).forEach(([name, t]) => {
+  const rows = t.rows.map(([r, p, m]) => '<div class="rrow" style="--c:' + window.__RCOL[r] + ';--w:' + Math.max(4, Math.sqrt(p) * 100).toFixed(1) + '%"><span class="nm"><i></i>' + r + '</span><span class="bar"><b></b></span><span class="pc">' + (Number.isInteger(Math.round(p * 1000) / 10) ? (p * 100).toFixed(0) : (p * 100).toFixed(1)) + '%</span><span class="mx">' + ('x' + m) + '</span></div>').join('');
+  const el = document.createElement('article');
+  el.className = 'rate card fade';
+  el.innerHTML = '<h3 class="toon">' + name + '</h3>' + rows + '<div class="tot"><span>x5 or better</span><b class="big">1 in ' + t.big + '</b></div><div class="tot tot2"><span>Back on average · ' + t.price + '</span><b>' + t.ev + '</b></div>';
+  grid.appendChild(el);
+});
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (window.gsap && !reduce) {
+  gsap.registerPlugin(ScrollTrigger);
+  const lenis = new Lenis({ duration: 1.15, smoothWheel: true });
+  lenis.on('scroll', ScrollTrigger.update);
+  gsap.ticker.add((t) => lenis.raf(t * 1000));
+  gsap.ticker.lagSmoothing(0);
+  document.querySelectorAll('a[href^="#"]').forEach((a) => a.addEventListener('click', (e) => { const id = a.getAttribute('href'); if (id.length > 1) { e.preventDefault(); lenis.scrollTo(id === '#top' ? 0 : id, { offset: -20 }); } }));
+  gsap.from('.hero h1 .ch', { y: -160, rotate: () => gsap.utils.random(-35, 35), opacity: 0, duration: 1.2, ease: 'elastic.out(1, 0.5)', stagger: 0.05, delay: 0.1 });
+  gsap.from('.hero p.lead, .hero .ctas', { y: 30, opacity: 0, duration: 0.8, ease: 'back.out(2)', stagger: 0.12, delay: 0.7 });
+  gsap.from('.side', { scale: 0, rotate: -30, duration: 0.8, ease: 'back.out(2.4)', stagger: 0.15, delay: 1.1 });
+  gsap.from('header', { y: -120, duration: 0.8, ease: 'back.out(1.8)' });
+  document.querySelectorAll('section h2.split').forEach((h) => gsap.from(h.querySelectorAll('.ch'), { scrollTrigger: { trigger: h, start: 'top 85%' }, y: 100, rotate: () => gsap.utils.random(-25, 25), opacity: 0, duration: 1, ease: 'elastic.out(1, 0.6)', stagger: 0.035 }));
+  gsap.utils.toArray('.fade').forEach((el) => gsap.to(el, { scrollTrigger: { trigger: el, start: 'top 88%', onEnter: () => el.classList.add('in') }, opacity: 1, y: 0, duration: 0.8, ease: 'back.out(1.6)' }));
+  document.querySelectorAll('.toon .ch').forEach((c) => c.addEventListener('pointerenter', () => gsap.fromTo(c, { y: 0 }, { y: -20, rotate: gsap.utils.random(-14, 14), duration: 0.16, yoyo: true, repeat: 1, ease: 'power2.out' })));
+  gsap.utils.toArray('.band').forEach((b, i) => gsap.fromTo(b, { rotate: i ? 1.5 : -1.5 }, { rotate: i ? -1.5 : 1.5, scrollTrigger: { trigger: b, scrub: true } }));
+} else document.querySelectorAll('.fade').forEach((el) => { el.style.opacity = 1; el.style.transform = 'none'; el.classList.add('in'); });
+</script>
+
+
+<script>
+/* ===== vidéo explicative : une timeline GSAP de 16 s, dans la DA, sans musique `[F-105]` ===== */
+(function () {
+  const box = document.getElementById('vidBox'), stage = document.getElementById('stage');
+  if (!box) return;
+  const fitStage = () => { stage.style.transform = 'scale(' + box.clientWidth / 1080 + ')'; };
+  new ResizeObserver(fitStage).observe(box); fitStage();
+  // boules dans le dôme de la machine dessinée
+  const dome = document.getElementById('vDome');
+  const cols = ['#fff', '#4FB3FF', '#C47DFF', '#FFC233', '#fff', '#FFA4B2', '#4FB3FF', '#fff', '#C47DFF', '#fff', '#FFC233', '#4FB3FF'];
+  const spots = [[90, 160], [130, 170], [170, 160], [70, 128], [110, 130], [150, 128], [190, 125], [90, 96], [130, 98], [170, 94], [112, 64], [150, 66]];
+  dome.innerHTML = spots.map(([x, y], i) => '<g transform="translate(' + x + ',' + y + ') rotate(' + (i * 37) + ')"><circle r="18" fill="#fff" stroke="#0B2A3C" stroke-width="3.5"/><path d="M-18 0 A18 18 0 0 1 18 0 Z" fill="' + cols[i] + '" stroke="#0B2A3C" stroke-width="3.5"/></g>').join('');
+  // jetons (vrais logos) et étoiles
+  const toks = window.__TOKENS || [];
+  document.getElementById('vCoins').innerHTML = toks.map((t) => '<div class="v-move v-coin"><img alt="" src="' + t.img + '"></div>').join('');
+  document.getElementById('vWCoins').innerHTML = toks.map((t) => '<img class="v-wc" alt="" src="' + t.img + '">').join('');
+  document.getElementById('vStars').innerHTML = Array.from({ length: 12 }, () => '<svg class="v-move v-star" viewBox="-12 -12 24 24"><use href="#star"/></svg>').join('');
+  if (!window.gsap) return;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const Q = (s) => stage.querySelectorAll(s);
+  const ctr = { xPercent: -50, yPercent: -50 };
+  // tout est caché dès le chargement : sinon, avant la lecture, les éléments s'affichent en vrac en haut à gauche `[F-106]`
+  gsap.set(Q('.v-move'), { ...ctr, opacity: 0 });
+  gsap.set('.v-wc', { scale: 0 });
+  const title = document.getElementById('vTitle'), sub = document.getElementById('vSub');
+  const tl = gsap.timeline({ repeat: -1, paused: true, defaults: { ease: 'power2.out' } });
+  const caption = (t, a, b) => {
+    tl.call(() => { title.textContent = a; sub.textContent = b; }, null, t);
+    tl.fromTo('#vCap', { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: 'back.out(2.6)', immediateRender: false }, t);
+  };
+  const SLOT = [310, 438], CHUTE = [215, 544], POP = [600, 320], WAL = [905, 420];
+  const show = (sel, t, x, y, from = {}) => tl.set(sel, { x, y, opacity: 1, scale: 1, rotation: 0, ...from }, t);
+  // remise à zéro au début de chaque boucle
+  tl.set(Q('.v-move'), { opacity: 0, scale: 1, rotation: 0 }, 0);
+  tl.set('#vCrank', { rotation: 0, svgOrigin: '201 326' }, 0);
+  tl.set('#vCapTop, #vCapBot', { x: 0, y: 0, rotation: 0, opacity: 1 }, 0);
+  tl.set('#vMachine', { rotation: 0 }, 0);
+  tl.set('.v-wc', { scale: 0 }, 0);
+  tl.set('#vP1, #vP2', { attr: { cy: 273 } }, 0);
+  // 1. choisir sa boule : la main clique la Mega, l'écran de la machine passe à 0.5 SOL
+  tl.addLabel('pick', 0); caption(0, 'Pick a ball', 'Mini 0.1 · Mega 0.5 · Gold 1 SOL');
+  const balls = { mini: [560, 330], mega: [720, 320], gold: [900, 310] };
+  Object.entries(balls).forEach(([k, [x, y]], i) => {
+    const el = stage.querySelector('[data-k=' + k + ']');
+    show(el, 0.25 + i * 0.12, x, y, { scale: 0 });
+    tl.to(el, { scale: 1, duration: 0.6, ease: 'back.out(2.4)' }, 0.25 + i * 0.12);
+  });
+  show('#vHand', 0.9, 1020, 580);
+  tl.to('#vHand', { x: 735, y: 345, duration: 0.85 }, 0.9);
+  tl.to('#vHand', { scale: 0.8, duration: 0.12, yoyo: true, repeat: 1 }, 1.8);
+  tl.to('[data-k=mega]', { scale: 1.2, duration: 0.4, ease: 'back.out(3)' }, 1.85);
+  tl.to('[data-k=mini], [data-k=gold]', { opacity: 0.3, duration: 0.3 }, 1.85);
+  tl.fromTo('#vPrice', { scale: 1 }, { scale: 1.35, svgOrigin: '108 330', yoyo: true, repeat: 1, duration: 0.18, immediateRender: false }, 1.95);
+  // 2. payer en SOL : une signature, la pièce file dans la fente
+  tl.addLabel('pay', 3); caption(3, 'Pay 0.5 SOL', 'One signature, from your own wallet');
+  tl.to('.v-ball, #vHand', { opacity: 0, duration: 0.3 }, 3);
+  show('#vWallet', 3.1, WAL[0], WAL[1], { scale: 0.4 });
+  tl.to('#vWallet', { scale: 1, duration: 0.55, ease: 'back.out(2.2)' }, 3.1);
+  show('#vSol', 3.6, WAL[0], 380, { scale: 0.3 });
+  tl.to('#vSol', { scale: 1, duration: 0.3 }, 3.6);
+  tl.to('#vSol', { keyframes: { x: [WAL[0], 640, SLOT[0]], y: [380, 170, SLOT[1]], easeEach: 'sine.inOut' }, rotation: 540, scale: 0.55, duration: 1.15, ease: 'none' }, 3.9);
+  tl.to('#vP1, #vP2', { attr: { cy: 266 }, duration: 0.3 }, 4.1);
+  tl.to('#vSol', { opacity: 0, scale: 0.2, duration: 0.15 }, 5.05);
+  tl.to('#vSlot', { attr: { fill: '#FFD23F' }, duration: 0.1, yoyo: true, repeat: 3 }, 5.05);
+  tl.to('#vP1, #vP2', { attr: { cy: 273 }, duration: 0.3 }, 5.3);
+  // 3. un tirage équitable : la graine est verrouillée avant de payer, ta signature termine le tirage
+  tl.addLabel('draw', 6); caption(6, 'A fair draw', 'The seed is locked before you pay');
+  tl.to('#vWallet', { opacity: 0.3, duration: 0.3 }, 6);
+  show('#vLock', 6.2, 640, 250, { scale: 0.5 });
+  tl.to('#vLock', { scale: 1, duration: 0.45, ease: 'back.out(2.2)' }, 6.2);
+  show('#vSig', 6.9, 640, 330, { scale: 0.5 });
+  tl.to('#vSig', { scale: 1, duration: 0.45, ease: 'back.out(2.2)' }, 6.9);
+  tl.to('#vLock, #vSig', { x: 640, y: 290, scale: 0.3, opacity: 0, duration: 0.45, ease: 'back.in(2)' }, 8.0);
+  show('#vQ', 8.35, 640, 290, { scale: 0, rotation: -120 });
+  tl.to('#vQ', { scale: 1, rotation: 0, duration: 0.5, ease: 'back.out(3)' }, 8.35);
+  tl.to('#vQ', { rotation: 360, duration: 0.55, ease: 'power2.inOut' }, 8.85);
+  tl.to('#vQ', { scale: 0, opacity: 0, duration: 0.25 }, 9.35);
+  // 4. POP : la manivelle tourne, la boule Epic sort, éclate, 5 vrais jetons
+  tl.addLabel('pop', 9.6); caption(9.6, 'Pop!', 'Five real tokens inside');
+  tl.to('#vCrank', { rotation: 720, svgOrigin: '201 326', duration: 1, ease: 'power2.inOut' }, 9.7);
+  tl.to('#vMachine', { rotation: 2.5, transformOrigin: '50% 100%', yoyo: true, repeat: 5, duration: 0.08, ease: 'none' }, 9.8);
+  show('#vCapsule', 10.7, CHUTE[0], CHUTE[1], { scale: 0.55 });
+  tl.to('#vCapsule', { keyframes: { x: [CHUTE[0], 340, 460, POP[0]], y: [CHUTE[1], 500, 560, POP[1]], easeEach: 'sine.out' }, scale: 1.7, rotation: 360, duration: 1, ease: 'none' }, 10.7);
+  tl.to('#vCapsule', { rotation: '+=16', yoyo: true, repeat: 5, duration: 0.07, ease: 'none' }, 11.75);
+  tl.to('#vCapTop', { x: -34, y: -60, rotation: -55, opacity: 0, duration: 0.5 }, 12.2);
+  tl.to('#vCapBot', { y: 46, opacity: 0, duration: 0.45, ease: 'power2.in' }, 12.2);
+  show('.v-star', 12.2, POP[0], POP[1], { scale: 0 });
+  tl.to('.v-star', { x: (i) => POP[0] + Math.cos(i * 0.52) * (120 + (i % 3) * 40), y: (i) => POP[1] + Math.sin(i * 0.52) * (100 + (i % 3) * 35), scale: (i) => 0.7 + (i % 3) * 0.3, rotation: 200, opacity: 0, duration: 0.9 }, 12.2);
+  show('.v-coin', 12.25, POP[0], POP[1], { scale: 0 });
+  tl.to('.v-coin', { x: (i) => POP[0] + Math.sin((i - 2) * 0.62) * 150, y: (i) => POP[1] - 20 - Math.cos((i - 2) * 0.62) * 120, scale: 1, duration: 0.55, ease: 'back.out(2)', stagger: 0.06 }, 12.25);
+  show('#vResult', 12.75, POP[0] - 120, POP[1] + 130, { scale: 0, rotation: -6 });
+  tl.to('#vResult', { scale: 1, duration: 0.5, ease: 'back.out(3)' }, 12.75);
+  tl.to('#vWallet', { opacity: 1, duration: 0.2 }, 12.9);
+  tl.to('.v-coin', { x: WAL[0], y: WAL[1] - 10, scale: 0.35, opacity: 0, duration: 0.55, ease: 'power2.in', stagger: 0.09 }, 13.3);
+  tl.to('#vWallet', { scale: 1.1, yoyo: true, repeat: 5, duration: 0.09, ease: 'none' }, 13.45);
+  tl.to('#vResult', { opacity: 0, scale: 0.6, duration: 0.3 }, 13.9);
+  // 5. garder ou tout revendre
+  tl.addLabel('hold', 14.2); caption(14.2, 'Hold or sell', 'Keep them for the moonshot, or sell all in one tap');
+  tl.to('.v-wc', { scale: 1, duration: 0.4, ease: 'back.out(3)', stagger: 0.07 }, 14.3);
+  show('#vBtns', 14.6, WAL[0], 555, { scale: 0.4 });
+  tl.to('#vBtns', { scale: 1, duration: 0.5, ease: 'back.out(2.5)' }, 14.6);
+  tl.to({}, { duration: 2.2 }, 15.1);
+  // sons de la vidéo `[F-113]` (seulement après un premier clic sur la page, et si le son est activé)
+  const sfx = (name, ...a) => () => window.SFX && SFX.play(name, ...a);
+  tl.call(sfx('clink'), null, 1.8);
+  tl.call(sfx('coin'), null, 5.0);
+  tl.call(sfx('crank', 0, 0.95), null, 9.7);
+  tl.call(sfx('drop'), null, 10.95);
+  tl.call(sfx('rattle', 0, 0.42), null, 11.75);
+  tl.call(sfx('pop'), null, 12.2);
+  tl.call(sfx('jingle', 'Epic'), null, 12.4);
+  // interface : lecture / pause, chapitres, barre de progression ; lecture quand la vidéo est à l'écran
+  const vPrice = document.getElementById('vPrice');
+  const prog = document.getElementById('vProg'), chap = [...document.querySelectorAll('#vChap button')];
+  const labels = ['pick', 'pay', 'draw', 'pop', 'hold'];
+  tl.eventCallback('onUpdate', () => {
+    prog.style.width = (tl.progress() * 100).toFixed(2) + '%';
+    const pr = tl.time() >= 1.95 ? '0.5 SOL' : '0.1 SOL'; if (vPrice.textContent !== pr) vPrice.textContent = pr;
+    const t = tl.time(); let cur = 0; labels.forEach((l, i) => { if (t >= tl.labels[l]) cur = i; });
+    chap.forEach((b, i) => b.classList.toggle('on', i === cur));
+  });
+  const playBtn = document.getElementById('vPlay'), ico = document.getElementById('vPlayIco');
+  const setIcon = (playing) => { ico.innerHTML = playing ? '<rect x="4" y="3" width="4" height="14" rx="1.5" fill="currentColor"/><rect x="12" y="3" width="4" height="14" rx="1.5" fill="currentColor"/>' : '<path d="M5 3 L17 10 L5 17 Z" fill="currentColor"/>'; playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play'); };
+  let userPaused = false;
+  playBtn.addEventListener('click', () => { userPaused = !tl.paused(); tl.paused(userPaused); setIcon(!userPaused); });
+  chap.forEach((b) => b.addEventListener('click', () => { tl.seek(b.dataset.l); if (!userPaused) tl.play(); }));
+  if (reduce) { tl.seek('hold'); tl.pause(); setIcon(false); return; }
+  new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting && !userPaused) tl.play(); else tl.pause(); }), { threshold: 0.35 }).observe(box);
+})();
+</script>
+<script>
+/* ===== sons : pièce, manivelle, chute, sifflet, gigote, POP, jingle selon la rareté `[F-113]` =====
+   Tout est synthétisé en direct (Web Audio) : pas de fichiers, pas de musique de banque de sons `[F-105]`.
+   Le navigateur n'autorise le son qu'après un premier clic : la démo automatique du chargement reste muette,
+   chaque vrai tour de manivelle sonne. */
+window.SFX = (() => {
+  let ctx = null, master = null, nbuf = null, on = true;
+  try { on = localStorage.getItem('shiny-sound') !== 'off'; } catch (e) {}
+  const unlock = () => {
+    if (!ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; ctx = new AC(); master = ctx.createGain(); master.gain.value = 0.5; master.connect(ctx.destination); }
+    if (ctx.state === 'suspended') ctx.resume();
+  };
+  ['pointerdown', 'keydown', 'touchstart'].forEach((ev) => addEventListener(ev, unlock, { capture: true, passive: true }));
+  const at = (d) => ctx.currentTime + 0.01 + (d || 0);
+  function tone(t, f0, f1, dur, type, vol, atk) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type || 'sine'; o.frequency.setValueAtTime(f0, t); if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + (atk || 0.004)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(master); o.start(t); o.stop(t + dur + 0.03);
+  }
+  function noise(t, dur, freq, q, vol, type) {
+    if (!nbuf) { nbuf = ctx.createBuffer(1, ctx.sampleRate * 0.5, ctx.sampleRate); const d = nbuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    const src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    src.buffer = nbuf; f.type = type || 'bandpass'; f.frequency.value = freq; f.Q.value = q;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f).connect(g).connect(master); src.start(t); src.stop(t + dur + 0.03);
+  }
+  const NOTES = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98];
+  const S = {
+    // la pièce : deux notes brillantes, « ka-ching »
+    coin(d) { const t = at(d); tone(t, 1975.5, 1975.5, 0.08, 'square', 0.06); tone(t + 0.075, 2637, 2637, 0.4, 'square', 0.06); tone(t + 0.075, 5274, 5274, 0.25, 'sine', 0.025); },
+    // une touche / la pièce tombe dans la fente
+    clink(d) { const t = at(d); noise(t, 0.04, 6500, 2, 0.12); tone(t, 3300, 3100, 0.12, 'triangle', 0.1); tone(t + 0.06, 4200, 4000, 0.2, 'triangle', 0.07); },
+    // cliquetis de la manivelle
+    crank(d, dur) { dur = dur || 1; for (let i = 0; i < 12; i++) { const t = at(d + (i * dur) / 12); noise(t, 0.028, 2300 + (i % 2) * 600, 7, 0.32); tone(t, 950, 520, 0.03, 'square', 0.025); } },
+    // la boule tombe et rebondit
+    drop(d) { [0, 0.19, 0.32, 0.41].forEach((o, i) => { const t = at(d + o), v = 0.32 * Math.pow(0.55, i); tone(t, 170, 70, 0.14, 'sine', v); noise(t, 0.05, 900, 0.7, v * 0.5, 'lowpass'); }); },
+    // elle saute vers nous : sifflet de dessin animé
+    whistle(d, dur) { tone(at(d), 360, 1180, dur || 0.55, 'sine', 0.1, 0.05); },
+    // elle gigote : petits cliquetis qui montent
+    rattle(d, dur) { dur = dur || 0.7; for (let i = 0; i < 10; i++) noise(at(d + (i * dur) / 10), 0.025, 2800 + i * 120, 4, 0.06 + 0.02 * i); },
+    // survol d'un bouton : petit « blip » rond, la hauteur varie un peu pour ne pas sonner robotique `[F-114]`
+    hover() { const t = at(0), f = 900 + Math.random() * 120; tone(t, f, f * 1.5, 0.07, 'triangle', 0.05, 0.003); tone(t, f * 2, f * 3, 0.05, 'sine', 0.012, 0.003); },
+    // appui sur un bouton
+    press() { const t = at(0); tone(t, 520, 260, 0.08, 'sine', 0.12, 0.002); noise(t, 0.03, 3000, 2, 0.06); },
+    // POP
+    pop(d) { const t = at(d); noise(t, 0.14, 1700, 0.7, 0.55); tone(t, 760, 110, 0.13, 'sine', 0.45, 0.002); tone(t + 0.012, 1600, 420, 0.09, 'triangle', 0.14, 0.002); },
+    // jingle : plus la rareté est haute, plus il monte (et il scintille à partir de Legendary)
+    jingle(rar, d) {
+      const n = { Common: 2, Rare: 3, Epic: 4, Legendary: 5, Jackpot: 6 }[rar] || 3;
+      for (let i = 0; i < n; i++) { const t = at(d + i * 0.08); tone(t, NOTES[i], NOTES[i], 0.55, 'triangle', 0.13, 0.006); tone(t, NOTES[i] * 2, NOTES[i] * 2, 0.3, 'sine', 0.035, 0.006); }
+      if (n >= 5) for (let i = 0; i < 12; i++) { const f = 2100 + Math.random() * 1800; tone(at(d + n * 0.08 + i * 0.045), f, f, 0.2, 'sine', 0.03); }
+    }
+  };
+  // ---- musique de fond : boîte à musique + nappe douce + basse ronde, 84 BPM, en boucle sur 8 mesures (C, Am, F, G)
+  // Composée ici et jouée note par note : pas de fichier, pas de musique de banque de sons `[F-105]` `[F-115]`
+  const _ = null, MEL = [
+    72, _, 76, 79, _, 76, 74, _,   72, _, 69, 72, 76, _, _, _,
+    69, _, 72, 77, _, 76, 74, 72,  74, _, 71, 67, _, _, 74, _,
+    79, _, 76, 72, _, 74, 76, _,   81, _, 79, 76, _, 72, _, _,
+    77, 76, 74, 72, _, 69, 72, _,  74, _, _, 71, 74, _, _, _
+  ];
+  const CH = [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]], BASS = [48, 45, 41, 43];
+  const hz = (m) => 440 * Math.pow(2, (m - 69) / 12), EIGHTH = 60 / 84 / 2;
+  let mus = null, musT = 0, musStep = 0, musTimer = 0;
+  function musNote(t, f, dur, vol, type, atk) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + atk); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(mus.bus); o.start(t); o.stop(t + dur + 0.05);
+  }
+  function musSchedule() {
+    while (musT < ctx.currentTime + 0.5) {
+      const st = musStep % 64, bar = Math.floor(st / 8) % 4, t = musT;
+      const m = MEL[st];
+      if (m) { musNote(t, hz(m), 0.9, 0.05, 'sine', 0.005); musNote(t, hz(m) * 2, 0.35, 0.012, 'sine', 0.005); musNote(t, hz(m) * 3, 0.18, 0.005, 'sine', 0.005); }
+      if (st % 8 === 0) CH[bar].forEach((n) => { musNote(t, hz(n), EIGHTH * 8.2, 0.022, 'triangle', 0.5); musNote(t, hz(n) * 1.003, EIGHTH * 8.2, 0.012, 'sine', 0.6); });
+      if (st % 4 === 0) musNote(t, hz(BASS[bar]), EIGHTH * 3.5, 0.06, 'sine', 0.02);
+      if (st % 2 === 1) { const src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain(); src.buffer = nbuf; f.type = 'highpass'; f.frequency.value = 7000; g.gain.setValueAtTime(0.012, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05); src.connect(f).connect(g).connect(mus.bus); src.start(t); src.stop(t + 0.08); }
+      musT += EIGHTH; musStep++;
+    }
+  }
+  function musicStart() {
+    if (!ctx || mus || !on) return;
+    if (!nbuf) { nbuf = ctx.createBuffer(1, ctx.sampleRate * 0.5, ctx.sampleRate); const d = nbuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    const bus = ctx.createGain(), lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 3200; bus.connect(lp).connect(master);
+    bus.gain.setValueAtTime(0.0001, ctx.currentTime); bus.gain.exponentialRampToValueAtTime(0.55, ctx.currentTime + 3); // entre en douceur
+    mus = { bus }; musT = ctx.currentTime + 0.1; musStep = 0;
+    musSchedule(); musTimer = setInterval(musSchedule, 120);
+  }
+  function musicStop() {
+    if (!mus) return;
+    const m = mus; mus = null; clearInterval(musTimer);
+    m.bus.gain.cancelScheduledValues(ctx.currentTime); m.bus.gain.setValueAtTime(Math.max(m.bus.gain.value, 0.0001), ctx.currentTime); m.bus.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4);
+    setTimeout(() => m.bus.disconnect(), 600);
+  }
+  // la musique démarre au premier clic (règle des navigateurs), se coupe quand l'onglet est caché
+  ['pointerdown', 'keydown', 'touchstart'].forEach((ev) => addEventListener(ev, () => setTimeout(musicStart, 0), { passive: true }));
+  document.addEventListener('visibilitychange', () => { if (!ctx) return; if (document.hidden) ctx.suspend(); else ctx.resume(); });
+
+  const api = {
+    play(name, ...a) { if (on && ctx) try { S[name](...a); } catch (e) {} },
+    // un tirage complet, calé sur l'animation de la machine (T.crank, T.drop, T.rise, T.shake, T.pop)
+    pullStart() { api.play('coin', 0); api.play('crank', 0.12, 0.9); api.play('drop', 1.0); api.play('whistle', 1.6, 0.6); api.play('rattle', 2.2, 0.72); },
+    get on() { return on; },
+    get ready() { return !!ctx && ctx.state === 'running'; },
+    toggle() { on = !on; try { localStorage.setItem('shiny-sound', on ? 'on' : 'off'); } catch (e) {} unlock(); if (on) { api.play('coin', 0); setTimeout(musicStart, 0); } else musicStop(); return on; }
+  };
+  // sons des boutons : survol et appui (un seul son par entrée, pas de rafale) `[F-114]`
+  const HOV = '.btn, button, nav a, .logo, #vChap button';
+  let lastHov = 0;
+  document.addEventListener('pointerover', (e) => {
+    if (e.pointerType === 'touch') return;
+    const el = e.target.closest(HOV); if (!el || el.contains(e.relatedTarget)) return;
+    const now = performance.now(); if (now - lastHov < 70) return; lastHov = now;
+    api.play('hover');
+  });
+  document.addEventListener('pointerdown', (e) => { if (e.target.closest(HOV) && !e.target.closest('#turnBtn, #againBtn, #sndBtn')) setTimeout(() => api.play('press'), 0); });
+  const btn = document.getElementById('sndBtn');
+  const sync = () => { btn.setAttribute('aria-pressed', String(on)); btn.setAttribute('aria-label', on ? 'Mute music and sounds' : 'Turn music and sounds on'); };
+  btn.addEventListener('click', () => { api.toggle(); sync(); }); sync();
+  return api;
+})();
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { OutlineEffect } from 'three/addons/effects/OutlineEffect.js';
+
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clamp01 = (v) => Math.min(1, Math.max(0, v));
+const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const backOut = (t) => { const c = 1.9; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
+await Promise.all([document.fonts.load('400 120px "Luckiest Guy"'), document.fonts.load('800 40px Poppins')]).catch(() => {});
+const INK = 0x0b2a3c;
+
+/* rendu cartoon : ombrage en 3 aplats + contours marine `[F-104]` */
+const grad = new THREE.DataTexture(new Uint8Array([120, 120, 120, 255, 200, 200, 200, 255, 255, 255, 255, 255]), 3, 1);
+grad.minFilter = grad.magFilter = THREE.NearestFilter; grad.needsUpdate = true;
+const toon = (c, o = {}) => new THREE.MeshToonMaterial({ color: c, gradientMap: grad, ...o });
+function makeRenderer(canvas) {
+  const r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  r.setPixelRatio(Math.min(devicePixelRatio, 2));
+  r.outputColorSpace = THREE.SRGBColorSpace;
+  return r;
+}
+function fit(r, cam, cv) { const w = cv.clientWidth, h = cv.clientHeight; if (!w || !h) return; r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
+function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; }
+function rr(x, X, Y, W, H, R) { x.beginPath(); x.roundRect(X, Y, W, H, R); }
+function star(x, cx, cy, R) { const p = [[0,-1],[.26,-.26],[1,0],[.26,.26],[0,1],[-.26,.26],[-1,0],[-.26,-.26]]; x.beginPath(); p.forEach(([a, b], i) => (i ? x.lineTo : x.moveTo).call(x, cx + a * R, cy + b * R)); x.closePath(); }
+const RCOL = { Common: 0xffffff, Rare: 0x4fb3ff, Epic: 0xc47dff, Legendary: 0xffc233, Jackpot: 0xff7ab6 };
+const noOutline = (m) => { m.userData.outlineParameters = { visible: false }; return m; };
+
+/* ---------- capsule : moitié de couleur marquée d'étoiles, moitié blanche, bande marine ---------- */
+const capTexCache = new Map();
+function capTex(hex) {
+  if (capTexCache.has(hex)) return capTexCache.get(hex);
+  const t = canvasTex(512, 256, (x, W, H) => {
+    x.fillStyle = '#' + hex.toString(16).padStart(6, '0'); x.fillRect(0, 0, W, H);
+    for (let i = 0; i < 2; i++) { star(x, W * (0.25 + i * 0.5), H * 0.6, 56); x.fillStyle = '#fff'; x.fill(); x.lineWidth = 8; x.strokeStyle = '#0B2A3C'; x.stroke(); }
+    x.fillStyle = 'rgba(255,255,255,.55)'; for (let i = 0; i < 4; i++) { x.beginPath(); x.arc(W * (0.125 + i * 0.25), H * 0.24, 10, 0, 7); x.fill(); }
+  });
+  capTexCache.set(hex, t); return t;
+}
+const M = {
+  white: toon(0xffffff), ink: toon(INK), sun: toon(0xffd23f), pink: toon(0xffa4b2), sky: toon(0xc6ebfa), wood: toon(0xd18f52),
+  metal: toon(0xd8e2ea), grass: toon(0x7ed27e),
+  glass: new THREE.MeshToonMaterial({ color: 0xdff4ff, gradientMap: grad, transparent: true, opacity: 0.3, depthWrite: false })
+};
+function capsule(hex, r = 0.21, jackpot = false) {
+  const g = new THREE.Group();
+  const topMat = toon(0xffffff, { map: capTex(hex) });
+  const top = new THREE.Mesh(new THREE.SphereGeometry(r, 40, 20, 0, Math.PI * 2, 0, Math.PI / 2), topMat);
+  const bot = new THREE.Mesh(new THREE.SphereGeometry(r, 40, 20, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), M.white);
+  const band = new THREE.Mesh(new THREE.TorusGeometry(r * 1.01, r * 0.075, 10, 48), M.ink); band.rotation.x = Math.PI / 2;
+  const shine = noOutline(new THREE.Mesh(new THREE.SphereGeometry(r * 0.22, 16, 8), new THREE.MeshBasicMaterial({ color: 0xffffff })));
+  shine.position.set(-r * 0.45, r * 0.62, r * 0.42); shine.scale.set(1, 0.6, 0.4);
+  const topG = new THREE.Group(); topG.add(top, band, shine);
+  g.add(topG, bot); g.userData = { topG, bot, topMat };
+  return g;
+}
+
+/* ================= LA MACHINE (le personnage) ================= */
+const mCv = document.getElementById('machine');
+const mR = makeRenderer(mCv);
+const outline = new OutlineEffect(mR, { defaultThickness: 0.0075, defaultColor: [0.043, 0.165, 0.235], defaultAlpha: 1 });
+const scene = new THREE.Scene();
+const cam = new THREE.PerspectiveCamera(26, 1, 0.1, 100);
+cam.position.set(0, 1.05, 14.5); cam.lookAt(0, 1.05, 0);
+scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+const sunL = new THREE.DirectionalLight(0xffffff, 2.2); sunL.position.set(-4, 7, 6); scene.add(sunL);
+const machine = new THREE.Group(); scene.add(machine);
+const add = (geo, mat, x, y, z, p = machine) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); p.add(m); return m; };
+
+add(new RoundedBoxGeometry(2.6, 0.24, 2.05, 4, 0.1), M.pink, 0, -0.97, 0);
+const body = add(new RoundedBoxGeometry(2.25, 1.8, 1.85, 6, 0.34), M.sun, 0, 0.0, 0);
+add(new THREE.CylinderGeometry(0.98, 1.06, 0.24, 64), M.pink, 0, 1.0, 0);
+add(new THREE.SphereGeometry(1.16, 64, 48), M.glass, 0, 2.15, 0);
+// reflets cartoon sur le dôme
+const hl = noOutline(add(new THREE.TorusGeometry(0.98, 0.045, 8, 40, Math.PI * 0.32), new THREE.MeshBasicMaterial({ color: 0xffffff }), 0, 2.15, 0.12));
+hl.rotation.set(0.15, -0.35, 2.0);
+const hl2 = noOutline(add(new THREE.SphereGeometry(0.07, 12, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }), -0.62, 2.72, 0.72));
+add(new THREE.CylinderGeometry(0.36, 0.42, 0.22, 40), M.pink, 0, 3.33, 0);
+// petite étoile sur le dessus, à la place de la pancarte `[F-105]`
+const topStar = add(new THREE.SphereGeometry(0.16, 20, 14), M.sun, 0, 3.54, 0);
+
+// visage : deux yeux qui suivent la souris, des joues roses
+const eyes = [];
+[-0.66, -0.02].forEach((x) => {
+  const e = new THREE.Group(); e.position.set(x, 0.56, 0.93); machine.add(e);
+  const white = add(new THREE.SphereGeometry(0.19, 32, 20), M.white, 0, 0, 0, e); white.scale.z = 0.45;
+  const pupil = add(new THREE.SphereGeometry(0.095, 24, 16), M.ink, 0, 0, 0.07, e); pupil.scale.z = 0.5;
+  const glint = noOutline(add(new THREE.SphereGeometry(0.03, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }), 0.03, 0.035, 0.12, e));
+  eyes.push({ e, pupil, glint });
+});
+[-0.98, 0.3].forEach((x) => { const c = noOutline(add(new THREE.CircleGeometry(0.11, 24), new THREE.MeshBasicMaterial({ color: 0xff8fa3 }), x, 0.38, 0.928)); c.scale.y = 0.6; });
+
+// écran du prix
+const plateTex = canvasTex(1024, 460, (x, W, H) => {
+  rr(x, 0, 0, W, H, 60); x.fillStyle = '#0B2A3C'; x.fill();
+  x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+  x.font = '400 200px "Luckiest Guy"'; x.lineWidth = 0; x.fillStyle = '#FFD23F'; x.fillText('0.1 SOL', W / 2, 200);
+  x.font = '800 54px Poppins'; x.fillStyle = '#C6EBFA'; x.fillText('MINI · 5 REAL TOKENS', W / 2, 360);
+});
+add(new RoundedBoxGeometry(1.42, 0.68, 0.06, 3, 0.1), M.ink, -0.34, -0.1, 0.91);
+noOutline(add(new THREE.PlaneGeometry(1.3, 0.58), new THREE.MeshBasicMaterial({ map: plateTex }), -0.34, -0.1, 0.945));
+// fente à pièces + manivelle
+add(new RoundedBoxGeometry(0.4, 0.22, 0.05, 2, 0.06), M.pink, 0.7, 0.42, 0.92);
+add(new RoundedBoxGeometry(0.26, 0.06, 0.06, 2, 0.02), M.ink, 0.7, 0.42, 0.945);
+const crank = new THREE.Group(); crank.position.set(0.72, -0.28, 0.96); machine.add(crank);
+add(new THREE.CylinderGeometry(0.34, 0.34, 0.1, 48), M.metal, 0, 0, 0, crank).rotation.x = Math.PI / 2;
+add(new THREE.CylinderGeometry(0.17, 0.17, 0.13, 32), M.pink, 0, 0, 0.03, crank).rotation.x = Math.PI / 2;
+add(new RoundedBoxGeometry(0.12, 0.56, 0.08, 2, 0.04), M.metal, 0, 0.18, 0.1, crank);
+add(new THREE.SphereGeometry(0.1, 20, 14), M.sky, 0, 0.45, 0.16, crank);
+// trappe de sortie
+add(new RoundedBoxGeometry(0.86, 0.44, 0.06, 3, 0.12), M.pink, -0.34, -0.68, 0.9);
+add(new RoundedBoxGeometry(0.66, 0.28, 0.07, 3, 0.1), M.ink, -0.34, -0.68, 0.92);
+const flap = new THREE.Group(); flap.position.set(-0.34, -0.55, 0.97); machine.add(flap);
+add(new THREE.BoxGeometry(0.62, 0.26, 0.02), M.sky, 0, -0.13, 0, flap);
+
+// capsules dans le dôme
+const pile = new THREE.Group(); pile.position.set(0, 2.15, 0); machine.add(pile);
+const mix = ['Common','Common','Common','Common','Common','Common','Rare','Rare','Rare','Rare','Rare','Epic','Epic','Epic','Epic','Legendary','Legendary','Legendary','Common','Rare','Epic','Jackpot','Common','Rare'];
+const spots = []; let guard = 0;
+while (spots.length < mix.length && guard++ < 6000) {
+  const p = new THREE.Vector3((Math.random() * 2 - 1) * 0.84, (Math.random() * 2 - 1) * 0.84, (Math.random() * 2 - 1) * 0.84);
+  if (p.length() > 0.88 || (p.y > 0.2 && Math.random() < 0.65) || spots.some((q) => q.distanceTo(p) < 0.42)) continue;
+  spots.push(p);
+}
+const domeBalls = spots.map((p, i) => { const c = capsule(RCOL[mix[i]], 0.21); c.position.copy(p); c.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6); c.userData.base = p.clone(); c.userData.ph = Math.random() * 6; pile.add(c); return c; });
+
+/* ---------- l'ouverture : la boule, les étoiles, les 5 jetons ---------- */
+const ball = capsule(RCOL.Epic, 0.28); scene.add(ball); ball.visible = false;
+const starTex = canvasTex(128, 128, (x) => { star(x, 64, 64, 54); x.fillStyle = '#fff'; x.fill(); x.lineWidth = 10; x.strokeStyle = '#0B2A3C'; x.stroke(); });
+const NS = 40, stars = [];
+for (let i = 0; i < NS; i++) {
+  const s = noOutline(new THREE.Sprite(new THREE.SpriteMaterial({ map: starTex, color: [0xffd23f, 0xffffff, 0xffa4b2, 0x4fb3ff][i % 4], transparent: true })));
+  s.visible = false; scene.add(s); stars.push({ s, v: new THREE.Vector3(), spin: 0 });
+}
+const ring = noOutline(new THREE.Mesh(new THREE.RingGeometry(0.4, 0.55, 48), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, side: THREE.DoubleSide })));
+ring.visible = false; scene.add(ring);
+const coins = [];
+const logos = await Promise.all(window.__TOKENS.map((t) => new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = t.img; })));
+window.__TOKENS.forEach((t, i) => {
+  const face = canvasTex(512, 512, (x, W, H) => {
+    x.fillStyle = '#FFF8EC'; x.beginPath(); x.arc(W / 2, H / 2, W / 2, 0, 7); x.fill();
+    x.save(); x.beginPath(); x.arc(W / 2, H / 2, W / 2 - 34, 0, 7); x.clip(); if (logos[i]) x.drawImage(logos[i], 34, 34, W - 68, H - 68); x.restore();
+    x.lineWidth = 16; x.strokeStyle = '#0B2A3C'; x.beginPath(); x.arc(W / 2, H / 2, W / 2 - 34, 0, 7); x.stroke();
+  });
+  face.center.set(0.5, 0.5); face.rotation = Math.PI / 2; // la face d'un cylindre a ses UV tournées d'un quart de tour : on remet le logo tête en haut
+  const rimM = toon(0xffc233), faceM = new THREE.MeshBasicMaterial({ map: face });
+  const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.09, 56), [rimM, faceM, faceM]);
+  coin.rotation.x = Math.PI / 2; coin.visible = false; scene.add(coin); coins.push({ coin, rimM });
+});
+
+let mouseX = 0, mouseY = 0;
+addEventListener('pointermove', (e) => { mouseX = e.clientX / innerWidth - 0.5; mouseY = e.clientY / innerHeight - 0.5; }, { passive: true });
+const narrow = () => innerWidth < 900;
+// la machine tient entière entre le bas des boutons et la colline : haut du panneau à `top`, pied à `bottom` (fractions de l'écran)
+let baseY = 0, baseS = 1;
+function place() {
+  const H = 2 * cam.position.z * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
+  const top = narrow() ? 0.47 : 0.4, bottom = narrow() ? 0.96 : 0.94;
+  baseS = ((bottom - top) * H) / 4.8;
+  baseY = 1.05 + (0.5 - bottom) * H + 1.1 * baseS;
+  machine.scale.setScalar(baseS);
+  machine.position.set(0, baseY, 0);
+}
+new ResizeObserver(() => { fit(mR, cam, mCv); place(); }).observe(mCv);
+fit(mR, cam, mCv); place();
+
+const DEMO = [['Epic', 1.8], ['Legendary', 5], ['Rare', 1], ['Epic', 1.8], ['Jackpot', 10]];
+let demoN = 0;
+function draw() { const [n, m] = DEMO[demoN++ % DEMO.length]; return { n, m }; }
+const pullEl = document.getElementById('pull');
+let anim = null, blinkAt = 2.4;
+const intro0 = performance.now();
+// couleur de la boule, des pièces et de l'anneau ; rose = boule mystère (vrai tirage pas encore connu)
+function paint(hex, common) {
+  ball.userData.topMat.map = capTex(hex); ball.userData.topMat.needsUpdate = true;
+  coins.forEach(({ rimM }) => rimM.color.setHex(common ? 0xffd23f : hex));
+  ring.material.color.setHex(hex);
+}
+function begin(res) {
+  paint(res ? RCOL[res.n] : 0xffa4b2, !!res && res.n === 'Common');
+  ball.userData.topG.position.set(0, 0, 0); ball.userData.topG.rotation.set(0, 0, 0); ball.userData.bot.position.set(0, 0, 0);
+  coins.forEach(({ coin }) => (coin.visible = false)); stars.forEach(({ s }) => (s.visible = false));
+  pullEl.classList.remove('on');
+  document.querySelector('.hero').classList.add('playing');
+  anim = { t0: performance.now(), res, done: false, burst: false, pending: !res };
+  window.SFX && SFX.pullStart();
+}
+const busy = () => !!(anim && !anim.done);
+function demo() { if (!busy()) begin(draw()); }
+// « Turn the crank » : sur le vrai site, ouvre l'achat (play.js définit window.__onTurn) ; sinon, tirage de démonstration
+function start() { if (window.__onTurn) return window.__onTurn(); demo(); }
+document.getElementById('turnBtn').addEventListener('click', start);
+document.getElementById('againBtn').addEventListener('click', () => { pullEl.classList.remove('on'); if (window.__onTurn) return window.__onTurn(); anim = null; setTimeout(demo, 200); });
+// API pour play.js : lance la manivelle tout de suite, ouvre la boule sur le vrai résultat quand il arrive
+window.__machine = {
+  busy,
+  play(promise) {
+    if (busy()) return false;
+    begin(null);
+    const a = anim;
+    promise.then((res) => { if (anim !== a) return; paint(RCOL[res.n], res.n === 'Common'); a.res = res; a.pending = false; })
+      .catch((err) => { if (anim !== a) return; a.pending = false; a.error = (err && err.message) || 'Something went wrong'; });
+    return true;
+  }
+};
+function showError(msg) {
+  pullEl.classList.add('err');
+  pullEl.style.setProperty('--rc', '#FFA4B2');
+  document.getElementById('pullName').textContent = 'Oops!';
+  document.getElementById('pullX').textContent = msg;
+  document.getElementById('pullSub').hidden = true; document.getElementById('pullLink').hidden = true;
+  document.getElementById('againBtn').textContent = 'Try again';
+  placePull(); pullEl.classList.add('on');
+}
+function showPull(res) {
+  pullEl.classList.remove('err');
+  pullEl.style.setProperty('--rc', '#' + RCOL[res.n].toString(16).padStart(6, '0'));
+  document.getElementById('pullName').textContent = res.n + '!';
+  document.getElementById('pullX').textContent = 'x' + res.m;
+  const sub = document.getElementById('pullSub'), link = document.getElementById('pullLink');
+  sub.hidden = !res.sub; sub.textContent = res.sub || '';
+  link.hidden = !res.link; if (res.link) link.href = res.link;
+  document.getElementById('againBtn').textContent = 'Turn again';
+  placePull();
+  pullEl.classList.add('on');
+}
+// l'étiquette se pose juste sous la boule qui a éclaté
+const pullAt = new THREE.Vector3();
+function placePull() {
+  pullAt.copy(target); pullAt.y -= 0.42 * baseS; pullAt.project(cam);
+  pullEl.style.left = ((pullAt.x + 1) / 2 * mCv.clientWidth) + 'px';
+  pullEl.style.top = ((1 - pullAt.y) / 2 * mCv.clientHeight) + 'px';
+}
+
+const T = { crank: [0, 1.0], drop: [0.9, 1.6], rise: [1.6, 2.2], shake: [2.2, 2.95], pop: [2.95, 3.2], coins: [3.0, 3.9] };
+const ph = (t, [a, b]) => clamp01((t - a) / (b - a));
+const tmp = new THREE.Vector3(), chute = new THREE.Vector3(), floor = new THREE.Vector3(), target = new THREE.Vector3();
+function frame(now) {
+  const t = now / 1000;
+  const ry = anim ? -0.12 : Math.sin(t * 0.45) * 0.16 - 0.2 + mouseX * 0.4;
+  machine.rotation.y += (ry - machine.rotation.y) * 0.06;
+  machine.rotation.x += ((anim ? 0 : mouseY * 0.05) - machine.rotation.x) * 0.06;
+  // petit rebond de personnage
+  const bob = Math.abs(Math.sin(t * 2.2)) * 0.05;
+  const it = reduce ? 9 : (now - intro0) / 1000;
+  let fall = 0, squash = 0;
+  if (it < 0.7) fall = Math.pow(1 - it / 0.7, 2) * 7;                         // chute
+  else if (it < 1.8) squash = Math.sin((it - 0.7) * 13) * Math.exp(-(it - 0.7) * 4.2); // écrasement / rebond
+  machine.position.y = baseY + (bob * (it > 1.8 ? 1 : 0) + fall) * baseS;
+  machine.scale.set(baseS * (1 + squash * 0.16), baseS * (1 - bob * 0.25) * (1 - squash * 0.22), baseS * (1 + squash * 0.16));
+  pile.position.y = 2.15 + (it > 0.7 && it < 1.9 ? Math.abs(Math.sin((it - 0.7) * 7)) * 0.35 * Math.exp(-(it - 0.7) * 2.5) : 0);
+  // les yeux suivent la souris (ou la boule), clignent de temps en temps
+  const look = anim && anim.lookAt ? anim.lookAt : null;
+  eyes.forEach(({ e, pupil, glint }) => {
+    const lx = look ? look.x : mouseX * 2, ly = look ? look.y : -mouseY * 2;
+    pupil.position.x += (THREE.MathUtils.clamp(lx * 0.07, -0.08, 0.08) - pupil.position.x) * 0.2;
+    pupil.position.y += (THREE.MathUtils.clamp(ly * 0.07, -0.08, 0.08) - pupil.position.y) * 0.2;
+    glint.position.x = pupil.position.x + 0.03; glint.position.y = pupil.position.y + 0.035;
+    const bl = it < 1.05 ? 0.06 : (t > blinkAt && t < blinkAt + 0.14 ? 0.08 : 1);
+    e.scale.y += (bl - e.scale.y) * 0.5;
+  });
+  if (t > blinkAt + 0.14) blinkAt = t + 2 + Math.random() * 3;
+  domeBalls.forEach((b) => { b.position.y = b.userData.base.y + Math.sin(t * 1.8 + b.userData.ph) * 0.014; });
+
+  if (anim && anim.error) { ball.visible = false; ring.visible = false; showError(anim.error); anim = null; document.querySelector('.hero').classList.remove('playing'); }
+  if (anim) {
+    let e = (now - anim.t0) / 1000;
+    // vrai tirage : tant que le serveur n'a pas répondu, la boule reste au bord de l'éclatement et gigote
+    const HOLD = T.pop[0] - 0.08;
+    if (anim.pending && e > HOLD) {
+      anim.t0 = now - HOLD * 1000; e = HOLD;
+      if (t - (anim.rt || 0) > 0.75) { anim.rt = t; window.SFX && SFX.play('rattle', 0, 0.72); }
+    }
+    machine.updateMatrixWorld();
+    chute.set(-0.34, -0.68, 0.8).applyMatrix4(machine.matrixWorld);
+    floor.set(-0.6, -1.0, 2.2).applyMatrix4(machine.matrixWorld);
+    const vw = 2 * cam.position.z * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)) * cam.aspect;
+    target.set(narrow() ? 0 : Math.min(vw * 0.24, 3.4 * baseS), baseY + 1.55 * baseS, 2.2);
+    anim.lookAt = e > T.drop[0] ? { x: (ball.position.x - machine.position.x) * 0.6, y: (ball.position.y - 0.3) * 0.5 } : null;
+    // 1. la manivelle tourne deux fois, la machine se trémousse, les boules se mélangent
+    const c = easeInOut(ph(e, T.crank));
+    crank.rotation.z = -c * Math.PI * 4;
+    machine.rotation.z = e < T.crank[1] ? Math.sin(e * 30) * 0.04 * Math.sin(ph(e, T.crank) * Math.PI) : machine.rotation.z * 0.8;
+    pile.rotation.y = c * 3; pile.rotation.x = Math.sin(c * Math.PI) * 0.3;
+    // 2. la boule sort, le rabat se soulève, elle rebondit
+    const d = ph(e, T.drop);
+    flap.rotation.x = -Math.sin(d * Math.PI) * 1.0;
+    ball.visible = e >= T.drop[0] && e < T.pop[1];
+    if (e < T.rise[0]) {
+      const dd = easeOut(d);
+      tmp.lerpVectors(chute, floor, dd); tmp.y += Math.abs(Math.sin(dd * Math.PI * 3)) * 0.55 * (1 - dd);
+      ball.position.copy(tmp); ball.rotation.set(dd * 10, 0, dd * 3); ball.scale.setScalar(baseS);
+    } else {
+      // 3. elle saute vers nous en grossissant
+      const r = backOut(ph(e, T.rise));
+      ball.position.lerpVectors(floor, target, clamp01(r)); ball.position.y += Math.sin(clamp01(r) * Math.PI) * 0.6 * baseS;
+      ball.scale.setScalar(baseS * (1 + r * 1.1));
+      ball.rotation.set(10 * (1 - clamp01(r)) + 0.25, 0, 0);
+      // 4. suspense : elle gigote, de plus en plus fort, et gonfle
+      const s = ph(e, T.shake);
+      const ew = anim.pending ? t : e; // pendant l'attente, le temps de l'animation est figé : on fait gigoter avec l'horloge
+      ball.rotation.z = Math.sin(ew * 55) * 0.25 * s * s;
+      ball.scale.setScalar(baseS * (1 + r * 1.1) * (1 + Math.sin(ew * 30) * 0.03 * s + s * 0.1));
+      // 5. POP : le haut s'envole, le bas tombe, anneau et étoiles
+      const p = ph(e, T.pop);
+      ball.userData.topG.position.set(-p * 0.5, p * 0.9, 0); ball.userData.topG.rotation.z = p * 2.2;
+      ball.userData.bot.position.y = -p * 0.6;
+      if (p > 0 && !anim.burst) {
+        anim.burst = true; anim.tb = e; window.SFX && SFX.play('pop');
+        stars.forEach((o) => { o.s.visible = true; o.s.position.copy(ball.position); o.v.set(Math.random() * 2 - 1, Math.random() * 1.6 - 0.2, Math.random() * 1.2 - 0.4).normalize().multiplyScalar(3 + Math.random() * 3.5); o.spin = (Math.random() - 0.5) * 10; o.s.scale.setScalar(baseS * (0.14 + Math.random() * 0.16)); o.v.multiplyScalar(baseS); });
+        ring.visible = true; ring.position.copy(ball.position);
+      }
+    }
+    if (anim.burst) {
+      const k = e - anim.tb, dt = 1 / 60;
+      stars.forEach((o) => { o.v.y -= 6.5 * baseS * dt; o.v.multiplyScalar(0.98); o.s.position.addScaledVector(o.v, dt); o.s.material.rotation += o.spin * dt; o.s.material.opacity = clamp01(1.5 - k); });
+      ring.scale.setScalar(baseS * (1 + k * 5)); ring.material.opacity = clamp01(1 - k * 2); ring.lookAt(cam.position);
+    }
+    // 6. les 5 jetons jaillissent en arc, tournent, et se posent
+    const k2 = ph(e, T.coins);
+    // jetons en éventail au-dessus de la boule, logos têtes en haut `[F-110]`
+    coins.forEach(({ coin }, i) => {
+      const ki = clamp01(k2 * 1.35 - i * 0.08), ek = backOut(ki), a = (i - 2) * 0.62, R = 1.25 * baseS * clamp01(ek);
+      coin.visible = ki > 0;
+      coin.position.set(target.x + Math.sin(a) * R, target.y + 0.1 * baseS + Math.cos(a) * R + Math.sin(t * 2.2 + i) * 0.03 * ki, target.z + 0.2);
+      coin.scale.setScalar(baseS * (0.25 + clamp01(ek) * 0.55));
+      coin.rotation.set(Math.PI / 2, (1 - ki) * Math.PI * 4, 0); // tourne dans son plan en sortant, s'arrête tête en haut
+    });
+    if (e > 3.5 && !anim.done) { anim.done = true; showPull(anim.res); window.SFX && SFX.play('jingle', anim.res.n, 0); }
+    if (anim.done) placePull();
+  }
+  outline.render(scene, cam);
+}
+
+/* ================= LES 3 BOULES ================= */
+const cCv = document.getElementById('capCanvas');
+const cR = makeRenderer(cCv);
+const cOut = new OutlineEffect(cR, { defaultThickness: 0.007, defaultColor: [0.043, 0.165, 0.235] });
+const cScene = new THREE.Scene();
+cScene.add(new THREE.AmbientLight(0xffffff, 1.2));
+const cl = new THREE.DirectionalLight(0xffffff, 2.2); cl.position.set(-3, 5, 6); cScene.add(cl);
+const cCam = new THREE.PerspectiveCamera(26, 1, 0.1, 100); cCam.position.set(0, 0.2, 10);
+// plus la boule est chère, plus elle est grosse
+const tierBalls = [0xffffff, 0xffa4b2, 0xffc233].map((hex, i) => { const b = capsule(hex, [0.72, 0.92, 1.12][i]); b.position.x = (i - 1) * 3.2; cScene.add(b); b.userData.i = i; b.userData.h = 0; return b; });
+const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(9, 9);
+cCv.addEventListener('pointermove', (e) => { const r = cCv.getBoundingClientRect(); ptr.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); });
+cCv.addEventListener('pointerleave', () => ptr.set(9, 9));
+new ResizeObserver(() => fit(cR, cCam, cCv)).observe(cCv); fit(cR, cCam, cCv);
+function frameCaps(now) {
+  const t = now / 1000;
+  cCam.position.z = narrow() ? 19 : 10;
+  ray.setFromCamera(ptr, cCam);
+  const hit = ray.intersectObjects(tierBalls, true)[0];
+  tierBalls.forEach((b) => {
+    let on = false; if (hit) { let o = hit.object; while (o && o !== b) o = o.parent; on = o === b; }
+    b.userData.h += ((on ? 1 : 0) - b.userData.h) * 0.12;
+    const h = b.userData.h, i = b.userData.i;
+    b.position.y = -0.25 + Math.abs(Math.sin(t * 2 + i * 1.3)) * 0.35 + h * 0.2;
+    b.scale.set(1 + Math.sin(t * 4 + i * 1.3) * 0.02, 1 - Math.sin(t * 4 + i * 1.3) * 0.02, 1);
+    b.rotation.set(0.3, t * 0.6 + i, Math.sin(t * 1.3 + i) * 0.15);
+    // au survol, la boule s'entrouvre comme si elle allait parler
+    b.userData.topG.position.y = h * 0.5; b.userData.topG.rotation.z = -h * 0.45;
+  });
+  cOut.render(cScene, cCam);
+}
+
+const vis = new Map();
+const io = new IntersectionObserver((es) => es.forEach((e) => vis.set(e.target, e.isIntersecting)), { rootMargin: '120px' });
+io.observe(mCv); io.observe(cCv);
+function loop(now) { if (vis.get(mCv) !== false) frame(now); if (vis.get(cCv)) frameCaps(now); requestAnimationFrame(loop); }
+requestAnimationFrame(loop);
+// première ouverture toute seule, pour montrer le geste
+if (!reduce) setTimeout(() => { if (scrollY < 200) demo(); }, 2900);
+</script>
+</body>
+</html>

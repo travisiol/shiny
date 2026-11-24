@@ -1,0 +1,7 @@
+node_modules
+.next
+.env*.local
+next-env.d.ts
+*.tsbuildinfo
+# tirages enregistrés en local (mode dev sans base de données)
+.data

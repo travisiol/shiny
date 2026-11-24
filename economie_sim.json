@@ -1,0 +1,23 @@
+{
+ "MINI 0.1 SOL": {
+  "ev": 90.2,
+  "house": 9.8,
+  "jackpot_share": 10.0,
+  "sim_profit_per_1000": 9.92,
+  "worst_drawdown_sol": 0
+ },
+ "MEGA 0.5 SOL": {
+  "ev": 91.5,
+  "house": 8.6,
+  "jackpot_share": 7.5,
+  "sim_profit_per_1000": 43.64,
+  "worst_drawdown_sol": 0
+ },
+ "GOLD 1 SOL": {
+  "ev": 91.6,
+  "house": 8.4,
+  "jackpot_share": 7.2,
+  "sim_profit_per_1000": 84.93,
+  "worst_drawdown_sol": 0
+ }
+}

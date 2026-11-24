@@ -1,0 +1,12 @@
+node_modules
+.next
+.vercel
+.env*.local
+.env
+*.tsbuildinfo
+next-env.d.ts
+# tirages enregistrés en local
+.data
+# copies de travail de la maquette
+site/candy.before-*.html
+site/candy.with-transitions.html
